@@ -1,0 +1,36 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body, #root {
+  min-height: 100vh;
+}
+
+body {
+  background: #0A0A0B;
+  color: #E5E5E5;
+  font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #2A2A30; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #3A3A40; }
+
+input:focus, select:focus, textarea:focus {
+  border-color: #D4A017 !important;
+  outline: none;
+}
+
+button { transition: all 0.15s; }
+button:active { transform: scale(0.97); }
+@media (hover: hover) { button:hover { filter: brightness(1.12); } }
+
+::selection {
+  background: #D4A01740;
+  color: #E5E5E5;
+}
