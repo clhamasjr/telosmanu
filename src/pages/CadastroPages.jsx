@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { useTable, useLookups, useViewport, useEquipPorArea, useOSPorMecanico } from '../hooks/useData'
+import { useTable, useLookups, useViewport, useOSPorMecanico } from '../hooks/useData'
 import { S, badge, Modal, Field, Empty, Search, Confirm, Header, Loading, fmtDate, fmtDT } from '../components/UI'
 import { EQUIP_STATUS, TURNOS, UNIDADES, ACCENT, FONT_DISPLAY } from '../lib/constants'
 import { supabase } from '../lib/supabase'

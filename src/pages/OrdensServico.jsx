@@ -231,7 +231,7 @@ function OSForm({os,setOs,onSave,onCancel,onDel,areas,equipamentos,mecanicos,sta
       <div style={{display:'flex',gap:14,marginBottom:10,alignItems:'center'}}>
         <div>
           <div style={{fontSize:9,color:'#94A3B8',textTransform:'uppercase'}}>Nº da OS</div>
-          <input style={{...S.input,width:100,fontSize:18,fontWeight:900,color:ACCENT,fontWeight:800,letterSpacing:2,textAlign:'center',marginBottom:0}}
+          <input style={{...S.input,width:100,fontSize:18,fontWeight:800,color:ACCENT,letterSpacing:2,textAlign:'center',marginBottom:0}}
             value={os.numero_ordem||''} onChange={e=>u('numero_ordem',e.target.value)} placeholder="AUTO"/>
         </div>
         <div style={{flex:1}}>
@@ -387,7 +387,7 @@ function OSDetail({os,onEdit,onAtender,onAprovar,mobile,perfil,mecanicos:allMec}
   return<div>
     <div style={{background:'#F1F5F9',borderRadius:8,padding:16,marginBottom:14,border:'1px solid #CBD5E1'}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}}>
-        <div style={{fontSize:28,fontWeight:900,color:ACCENT,fontWeight:800,letterSpacing:3}}>Nº {os.numero_ordem||'—'}</div><StatusBadge status={os.status_os}/>
+        <div style={{fontSize:28,fontWeight:800,color:ACCENT,letterSpacing:3}}>Nº {os.numero_ordem||'—'}</div><StatusBadge status={os.status_os}/>
       </div>
       {os.equipamentos&&<div style={{marginBottom:6}}><div style={{fontSize:9,color:'#94A3B8',textTransform:'uppercase'}}>Equipamento</div>
         <div style={{fontSize:16,fontWeight:700,color:'#0F172A'}}>⚙️ {os.equipamentos.codigo?os.equipamentos.codigo+' - ':''}{os.equipamentos.nome}</div></div>}
