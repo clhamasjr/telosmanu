@@ -32,9 +32,9 @@ export function useTable(table, opts = {}) {
     setLoading(false)
   }, [table, select, order, ascending])
   useEffect(() => { fetch() }, [fetch])
-  const insert = async (rec) => { const { data: r, error } = await supabase.from(table).insert(rec).select().single(); if (!error) { setData(p => [r, ...p]); return r } console.error(error); return null }
-  const update = async (id, upd) => { const { data: r, error } = await supabase.from(table).update(upd).eq('id', id).select().single(); if (!error) { setData(p => p.map(x => x.id === id ? r : x)); return r } console.error(error); return null }
-  const remove = async (id) => { const { error } = await supabase.from(table).delete().eq('id', id); if (!error) setData(p => p.filter(x => x.id !== id)); return !error }
+  const insert = async (rec) => { const { data: r, error } = await supabase.from(table).insert(rec).select().single(); if (!error) { setData(p => [r, ...p]); return r } console.error(error); alert('Erro ao salvar: ' + (error.message || 'Erro desconhecido')); return null }
+  const update = async (id, upd) => { const { data: r, error } = await supabase.from(table).update(upd).eq('id', id).select().single(); if (!error) { setData(p => p.map(x => x.id === id ? r : x)); return r } console.error(error); alert('Erro ao atualizar: ' + (error.message || 'Erro desconhecido')); return null }
+  const remove = async (id) => { const { error } = await supabase.from(table).delete().eq('id', id); if (!error) setData(p => p.filter(x => x.id !== id)); else alert('Erro ao excluir: ' + (error.message || 'Erro desconhecido')); return !error }
   return { data, loading, refetch: fetch, insert, update, remove }
 }
 
@@ -90,22 +90,29 @@ export function useLookups() {
   const [tiposFalha, setTiposFalha] = useState([])
   const [mecanicos, setMecanicos] = useState([])
   const [equipamentos, setEquipamentos] = useState([])
+  const [familias, setFamilias] = useState([])
+  const [centrosCusto, setCentrosCusto] = useState([])
+  const [fornecedores, setFornecedores] = useState([])
   useEffect(() => {
     (async () => {
-      const [a, s, tm, tf, m] = await Promise.all([
+      const [a, s, tm, tf, m, f, cc, forn] = await Promise.all([
         supabase.from('areas').select('*').order('nome'),
         supabase.from('status_os').select('*').order('ordem_exibicao'),
         supabase.from('tipos_manutencao').select('*').order('nome'),
         supabase.from('tipos_falha').select('*').order('nome'),
         supabase.from('mecanicos').select('*').eq('ativo', true).order('nome'),
+        supabase.from('familias_equipamento').select('*').order('nome'),
+        supabase.from('centros_custo').select('*').eq('ativo', true).order('nome'),
+        supabase.from('fornecedores').select('*').eq('ativo', true).order('nome_fantasia'),
       ])
       // Load ALL equipamentos with pagination
       const allEquip = await fetchAll('equipamentos', '*', 'nome', true)
       setAreas(a.data || []); setStatusList(s.data || []); setTiposMan(tm.data || [])
       setTiposFalha(tf.data || []); setMecanicos(m.data || []); setEquipamentos(allEquip)
+      setFamilias(f.data || []); setCentrosCusto(cc.data || []); setFornecedores(forn.data || [])
     })()
   }, [])
-  return { areas, statusList, tiposMan, tiposFalha, mecanicos, equipamentos }
+  return { areas, statusList, tiposMan, tiposFalha, mecanicos, equipamentos, familias, centrosCusto, fornecedores }
 }
 
 export function useDashboard(dateFilter) {

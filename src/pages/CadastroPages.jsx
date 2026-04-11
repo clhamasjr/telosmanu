@@ -7,10 +7,11 @@ import { supabase } from '../lib/supabase'
 // ══════════════════ EQUIPAMENTOS ══════════════════
 export function Equipamentos() {
   const { data, loading, insert, update, remove, refetch } = useTable('equipamentos', { order: 'nome', ascending: true })
-  const { areas } = useLookups()
+  const { areas, familias, centrosCusto } = useLookups()
   const vp = useViewport()
   const [search, setSearch] = useState('')
   const [fArea, setFA] = useState('TODOS')
+  const [fFamilia, setFF] = useState('TODOS')
   const [modal, setModal] = useState(null)
   const [item, setItem] = useState(null)
   const [confirm, setConfirm] = useState(null)
@@ -18,11 +19,12 @@ export function Equipamentos() {
 
   const filtered = useMemo(() => data.filter(e => {
     if (fArea !== 'TODOS' && e.area_id !== fArea) return false
+    if (fFamilia !== 'TODOS' && e.familia_id !== fFamilia) return false
     if (search) { const s = search.toLowerCase(); return (e.nome||'').toLowerCase().includes(s)||(e.codigo||'').toLowerCase().includes(s)||(e.tag||'').toLowerCase().includes(s) }
     return true
-  }), [data, search, fArea])
+  }), [data, search, fArea, fFamilia])
 
-  const novo = () => { setItem({ nome:'', codigo:'', tag:'', area_id:'', fabricante:'', modelo:'', status:'Operando', localizacao:'', observacoes:'' }); setModal('novo') }
+  const novo = () => { setItem({ nome:'', codigo:'', tag:'', area_id:'', familia_id:'', centro_custo_id:'', fabricante:'', modelo:'', ano_fabricacao:'', numero_serie:'', status:'Operando', localizacao:'', observacoes:'' }); setModal('novo') }
   const salvar = async () => {
     if (!(item.nome||'').trim()) return
     const p = { ...item }; delete p.id; delete p.created_at; delete p.updated_at
@@ -38,6 +40,7 @@ export function Equipamentos() {
     <div style={{display:'flex',gap:10,marginBottom:16,flexWrap:'wrap',alignItems:'center'}}>
       <Search value={search} onChange={setSearch} ph="Nome, código, TAG..." />
       <select style={{...S.select,width:160}} value={fArea} onChange={e=>setFA(e.target.value)}><option value="TODOS">Todas Áreas</option>{areas.map(a=><option key={a.id} value={a.id}>{a.nome}</option>)}</select>
+      <select style={{...S.select,width:160}} value={fFamilia} onChange={e=>setFF(e.target.value)}><option value="TODOS">Todas Famílias</option>{familias.map(f=><option key={f.id} value={f.id}>{f.nome}</option>)}</select>
       <span style={{fontSize:11,color:'#94A3B8'}}>{filtered.length} equipamento(s)</span>
     </div>
 
@@ -52,6 +55,7 @@ export function Equipamentos() {
           </div>
           {e.codigo&&<div style={{fontSize:12,color:ACCENT,marginBottom:4}}>COD: {e.codigo}</div>}
           {e.tag&&<div style={{fontSize:12,color:'#64748B',marginBottom:4}}>TAG: {e.tag}</div>}
+          {familias.find(f=>f.id===e.familia_id)&&<div style={{fontSize:11,color:'#8B5CF6',marginBottom:3}}>Família: {familias.find(f=>f.id===e.familia_id)?.nome}</div>}
           <div style={{fontSize:12,color:'#64748B',marginBottom:8}}>{areas.find(a=>a.id===e.area_id)?.nome||'Sem área'}{e.fabricante?' · '+e.fabricante:''}</div>
           <div style={{display:'flex',gap:6}}>
             <button style={{...S.btnS,flex:1,fontSize:11}} onClick={()=>setHistEquip(e)}>📊 Histórico</button>
@@ -69,8 +73,12 @@ export function Equipamentos() {
           <Field label="TAG"><input style={S.input} value={item.tag||''} onChange={e=>setItem({...item,tag:e.target.value})}/></Field>
           <Field label="Área"><select style={S.select} value={item.area_id||''} onChange={e=>setItem({...item,area_id:e.target.value})}><option value="">Selecione</option>{areas.map(a=><option key={a.id} value={a.id}>{a.nome}</option>)}</select></Field>
           <Field label="Status"><select style={S.select} value={item.status||'Operando'} onChange={e=>setItem({...item,status:e.target.value})}>{EQUIP_STATUS.map(s=><option key={s}>{s}</option>)}</select></Field>
+          <Field label="Família"><select style={S.select} value={item.familia_id||''} onChange={e=>setItem({...item,familia_id:e.target.value})}><option value="">Selecione</option>{familias.map(f=><option key={f.id} value={f.id}>{f.nome}</option>)}</select></Field>
+          <Field label="Centro de Custo"><select style={S.select} value={item.centro_custo_id||''} onChange={e=>setItem({...item,centro_custo_id:e.target.value})}><option value="">Selecione</option>{centrosCusto.map(c=><option key={c.id} value={c.id}>{c.codigo} - {c.nome}</option>)}</select></Field>
           <Field label="Fabricante"><input style={S.input} value={item.fabricante||''} onChange={e=>setItem({...item,fabricante:e.target.value})}/></Field>
           <Field label="Modelo"><input style={S.input} value={item.modelo||''} onChange={e=>setItem({...item,modelo:e.target.value})}/></Field>
+          <Field label="Ano Fabricação"><input style={S.input} value={item.ano_fabricacao||''} onChange={e=>setItem({...item,ano_fabricacao:e.target.value})} placeholder="Ex: 2020"/></Field>
+          <Field label="Nº Série"><input style={S.input} value={item.numero_serie||''} onChange={e=>setItem({...item,numero_serie:e.target.value})}/></Field>
           <Field label="Localização"><input style={S.input} value={item.localizacao||''} onChange={e=>setItem({...item,localizacao:e.target.value})}/></Field>
         </div>
         <Field label="Observações"><textarea style={{...S.input,minHeight:60,resize:'vertical'}} value={item.observacoes||''} onChange={e=>setItem({...item,observacoes:e.target.value})}/></Field>

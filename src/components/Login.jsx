@@ -12,10 +12,19 @@ export default function Login({ onLogin }) {
     e.preventDefault()
     if (!email.trim() || !senha.trim()) { setErro('Preencha email e senha'); return }
     setLoading(true); setErro('')
-    const { data, error } = await supabase.from('usuarios').select('*').eq('email', email.trim().toLowerCase()).eq('senha', senha.trim()).eq('ativo', true).single()
-    if (error || !data) { setErro('Email ou senha incorretos'); setLoading(false); return }
-    localStorage.setItem('telos_user', JSON.stringify(data))
-    onLogin(data); setLoading(false)
+    try {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/auth`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY },
+        body: JSON.stringify({ action: 'login', email: email.trim().toLowerCase(), senha: senha.trim() })
+      })
+      const result = await res.json()
+      if (!res.ok || result.error) { setErro(result.error || 'Email ou senha incorretos'); setLoading(false); return }
+      localStorage.setItem('telos_user', JSON.stringify(result.user))
+      onLogin(result.user); setLoading(false)
+    } catch {
+      setErro('Erro de conexão. Tente novamente.'); setLoading(false)
+    }
   }
 
   return <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 50%, #F8FAFC 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT, padding: 20 }}>

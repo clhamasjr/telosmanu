@@ -695,6 +695,19 @@ export function Usuarios() {
     const p = { ...item }; delete p.id; delete p.created_at
     Object.keys(p).forEach(k => { if (p[k] === '') p[k] = null })
     if (modal === 'editar' && !p.senha) delete p.senha
+    // Hash password via Edge Function before saving
+    if (p.senha) {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/auth`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY },
+          body: JSON.stringify({ action: 'set_password', nova_senha: p.senha })
+        })
+        const result = await res.json()
+        if (!res.ok || result.error) { alert('Erro ao processar senha: ' + (result.error || 'Erro')); return }
+        p.senha = result.senha_hash
+      } catch { alert('Erro de conexão ao processar senha'); return }
+    }
     if (item.id) await update(item.id, p); else {
       if (!p.senha) { alert('Defina uma senha para o novo usuário'); return }
       await insert(p)
