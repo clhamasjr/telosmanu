@@ -110,36 +110,32 @@ export function Relatorios() {
       })
       const disponibilidade = eqDisps.length > 0 ? eqDisps.reduce((a, b) => a + b, 0) / eqDisps.length : 100
       
-      // ── HH por mecânico: buscar os_mecanicos pelos IDs das OS já carregadas ──
-      const osIds = allOS.map(o => o.id)
-      let allOsMec = []
-      // Buscar em batches de 200 IDs (limite Supabase)
-      for (let i = 0; i < osIds.length; i += 200) {
-        try {
-          const batch = osIds.slice(i, i + 200)
-          const { data: rows } = await supabase.from('os_mecanicos')
-            .select('*,mecanicos(id,nome)')
-            .in('ordem_servico_id', batch)
-          if (rows) allOsMec = allOsMec.concat(rows)
-        } catch (e) { /* skip batch */ }
+      // ── Buscar apontamentos HH do período ──
+      let allHH = [], hhPg = 0
+      while (true) {
+        const { data: hhRows } = await supabase.from('apontamento_hh')
+          .select('ordem_servico_id,mecanico_id,tempo_minutos,mecanicos(nome)')
+          .gte('data_inicio', from + 'T00:00:00').lte('data_inicio', to + 'T23:59:59')
+          .range(hhPg * 1000, (hhPg + 1) * 1000 - 1)
+        if (!hhRows || hhRows.length === 0) break
+        allHH = allHH.concat(hhRows)
+        if (hhRows.length < 1000) break
+        hhPg++; if (hhPg > 30) break
       }
 
-      // ── Montar mapa de mecânicos ──
+      // ── Montar mapa de mecânicos com HH real ──
       const mecMap = {}
-      // 1) os_mecanicos (multi-mecânico real)
-      const osById = {}
-      allOS.forEach(o => { osById[o.id] = o })
-      allOsMec.forEach(om => {
-        const nome = om.mecanicos?.nome
-        if (!nome) return
+      allHH.forEach(h => {
+        const nome = h.mecanicos?.nome || 'Não identificado'
+        const minutos = Math.max(0, h.tempo_minutos || 0)
         if (!mecMap[nome]) mecMap[nome] = { total: 0, tempoTotal: 0, osIds: new Set() }
-        if (!mecMap[nome].osIds.has(om.ordem_servico_id)) {
-          mecMap[nome].osIds.add(om.ordem_servico_id)
+        mecMap[nome].tempoTotal += minutos
+        if (h.ordem_servico_id && !mecMap[nome].osIds.has(h.ordem_servico_id)) {
+          mecMap[nome].osIds.add(h.ordem_servico_id)
           mecMap[nome].total++
-          mecMap[nome].tempoTotal += osById[om.ordem_servico_id]?.tempo_execucao_min || 0
         }
       })
-      // 2) Fallback: executado_por das OS (dados importados SOFMAN)
+      // Fallback: executado_por das OS (dados SOFMAN sem apontamento HH)
       allOS.forEach(o => {
         const exec = o.executado_por
         if (!exec) return
@@ -147,10 +143,9 @@ export function Relatorios() {
         if (!mecMap[exec].osIds.has(o.id)) {
           mecMap[exec].osIds.add(o.id)
           mecMap[exec].total++
-          mecMap[exec].tempoTotal += o.tempo_execucao_min || 0
         }
       })
-      // 3) Mecânicos cadastrados sem OS no período (mostrar com 0h)
+      // Mecânicos cadastrados sem OS no período (mostrar com 0)
       ;(mecs || []).forEach(m => {
         if (!mecMap[m.nome]) mecMap[m.nome] = { total: 0, tempoTotal: 0, osIds: new Set() }
       })
