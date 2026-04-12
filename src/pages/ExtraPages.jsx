@@ -58,7 +58,7 @@ export function Relatorios() {
       let allOS = [], pg = 0
       while (true) {
         const { data: rows } = await supabase.from('ordens_servico')
-          .select('id,numero_ordem,titulo,data_abertura,data_inicio,data_conclusao,tempo_execucao_min,tempo_atendimento_min,executado_por,solicitante,equipamento_id,equipamentos(id,nome,codigo),areas(nome),status_os(nome),tipos_manutencao(nome),tipos_falha(nome)')
+          .select('id,numero_ordem,titulo,data_abertura,data_inicio,data_conclusao,tempo_execucao_min,tempo_maquina_parada_min,tempo_atendimento_min,executado_por,solicitante,equipamento_id,equipamentos(id,nome,codigo),areas(nome),status_os(nome),tipos_manutencao(nome),tipos_falha(nome)')
           .gte('data_abertura', from + 'T00:00:00').lte('data_abertura', to + 'T23:59:59')
           .order('data_abertura').range(pg * 1000, (pg + 1) * 1000 - 1)
         if (!rows || rows.length === 0) break
@@ -159,14 +159,21 @@ export function Relatorios() {
       })).sort((a, b) => b.horas - a.horas)
 
       // ── Top equipamentos que mais param ──
+      // Somar HH dos apontamentos por OS → por equipamento
+      const hhPorOS = {}
+      allHH.forEach(h => {
+        if (!h.ordem_servico_id) return
+        hhPorOS[h.ordem_servico_id] = (hhPorOS[h.ordem_servico_id] || 0) + Math.max(0, h.tempo_minutos || 0)
+      })
       const eqParadas = {}
       allOS.forEach(o => {
         const eqNome = o.equipamentos?.nome || 'Sem equipamento'
         const eqId = o.equipamentos?.id
         if (!eqId) return
-        if (!eqParadas[eqId]) eqParadas[eqId] = { nome: eqNome, codigo: o.equipamentos?.codigo, total: 0, tempoTotal: 0, falhas: {} }
+        if (!eqParadas[eqId]) eqParadas[eqId] = { nome: eqNome, codigo: o.equipamentos?.codigo, total: 0, tempoParada: 0, tempoReparo: 0, falhas: {} }
         eqParadas[eqId].total++
-        eqParadas[eqId].tempoTotal += o.tempo_execucao_min || 0
+        eqParadas[eqId].tempoParada += o.tempo_maquina_parada_min || 0
+        eqParadas[eqId].tempoReparo += hhPorOS[o.id] || 0
         const falha = o.tipos_falha?.nome || o.tipos_manutencao?.nome || '?'
         eqParadas[eqId].falhas[falha] = (eqParadas[eqId].falhas[falha] || 0) + 1
       })
@@ -200,7 +207,7 @@ export function Relatorios() {
         return {
           equipamento: e.nome, codigo: e.codigo, totalOS: e.total,
           principalFalha: topFalha ? topFalha[0] : '?', qtdPrincipal: topFalha ? topFalha[1] : 0,
-          tempoMedio: e.total > 0 ? Math.round(e.tempoTotal / e.total) : 0,
+          tempoMedio: e.total > 0 ? Math.round((e.tempoParada || e.tempoReparo) / e.total) : 0,
           sugestaoPeriodicidade: intervalo,
           sugestaoDescricao: `Inspeção preventiva ${topFalha ? topFalha[0].toLowerCase() : ''} - ${e.nome}`,
         }
@@ -311,13 +318,15 @@ export function Relatorios() {
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
         <KPI label="Equip c/ OS" value={d.topEquip.length} accent={ACCENT} sub="No período" small={vp.isMobile} />
         <KPI label="Top Paradas" value={d.topEquip[0]?.total || 0} accent="#EF4444" sub={d.topEquip[0]?.nome || '—'} small={vp.isMobile} />
+        <KPI label="Parada Total" value={fmtHrs(d.topEquip.reduce((s, e) => s + e.tempoParada, 0))} accent="#F59E0B" sub="Máquina parada" small={vp.isMobile} />
+        <KPI label="HH Reparo" value={fmtHrs(d.topEquip.reduce((s, e) => s + e.tempoReparo, 0))} accent="#3B82F6" sub="Horas de reparo" small={vp.isMobile} />
       </div>
       <div style={S.card}>
         <h3 style={{ margin: '0 0 12px', fontSize: 11, color: '#64748B', textTransform: 'uppercase', letterSpacing: 1 }}>🏆 Ranking de Paradas por Equipamento</h3>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead><tr>
-              <th style={S.th}>#</th><th style={S.th}>Equipamento</th><th style={S.th}>Cód.</th><th style={S.th}>OS</th><th style={S.th}>Tempo Total</th><th style={S.th}>T. Médio</th><th style={S.th}>Principal Falha</th>
+              <th style={S.th}>#</th><th style={S.th}>Equipamento</th><th style={S.th}>Cód.</th><th style={S.th}>OS</th><th style={S.th}>Parada</th><th style={S.th}>HH Reparo</th><th style={S.th}>T. Médio</th><th style={S.th}>Principal Falha</th>
             </tr></thead>
             <tbody>{d.topEquip.slice(0, 30).map((e, i) => {
               const topF = Object.entries(e.falhas).sort((a, b) => b[1] - a[1])[0]
@@ -326,8 +335,9 @@ export function Relatorios() {
                 <td style={{ ...S.td, fontWeight: 600 }}>{e.nome}</td>
                 <td style={{ ...S.td, color: ACCENT, fontSize: 11 }}>{e.codigo || '—'}</td>
                 <td style={{ ...S.td, fontWeight: 700, color: e.total > 50 ? '#EF4444' : e.total > 20 ? '#F59E0B' : '#0F172A' }}>{e.total}</td>
-                <td style={{ ...S.td, fontSize: 11, color: '#64748B' }}>{fmtHrs(e.tempoTotal)}</td>
-                <td style={{ ...S.td, fontSize: 11, color: '#3B82F6' }}>{e.total > 0 ? Math.round(e.tempoTotal / e.total) : 0}min</td>
+                <td style={{ ...S.td, fontSize: 11, color: '#F59E0B', fontWeight: 600 }}>{fmtHrs(e.tempoParada)}</td>
+                <td style={{ ...S.td, fontSize: 11, color: '#3B82F6', fontWeight: 600 }}>{fmtHrs(e.tempoReparo)}</td>
+                <td style={{ ...S.td, fontSize: 11, color: '#64748B' }}>{e.total > 0 ? Math.round((e.tempoParada || e.tempoReparo) / e.total) : 0}min</td>
                 <td style={{ ...S.td, fontSize: 11 }}>{topF ? <span>{topF[0]} <span style={{ color: '#94A3B8' }}>({topF[1]}x)</span></span> : '—'}</td>
               </tr>
             })}</tbody>
