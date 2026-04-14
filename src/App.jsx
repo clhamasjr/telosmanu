@@ -15,7 +15,7 @@ export const useUser = () => useContext(UserContext)
 
 export default function App() {
   const [user, setUser] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('telos_user')) } catch { return null }
+    try { return JSON.parse(localStorage.getItem('manutelos_user')) } catch { return null }
   })
   const [page, setPage] = useState('dashboard')
   const [osStatusFilter, setOsStatusFilter] = useState(null)
@@ -23,7 +23,7 @@ export default function App() {
 
   const handleLogin = (u) => setUser(u)
   const handleLogout = () => {
-    localStorage.removeItem('telos_user')
+    localStorage.removeItem('manutelos_user')
     setUser(null)
     setPage('dashboard')
   }

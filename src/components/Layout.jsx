@@ -14,7 +14,7 @@ export default function Layout({ page, setPage, children, vp, user, onLogout, al
   return <div style={{ fontFamily: FONT, background: '#F1F5F9', color: '#0F172A', minHeight: '100vh', fontSize: 13 }}>
     {!vp.isDesktop && <header style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 56, background: '#FFF', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', padding: '0 16px', zIndex: 200, gap: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
       <button onClick={() => setOpen(!open)} style={{ background: 'none', border: 'none', color: '#334155', fontSize: 22, cursor: 'pointer', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>☰</button>
-      <div style={{ fontSize: 20, fontWeight: 800, color: ACCENT, flex: 1 }}>TELOS</div>
+      <div style={{ fontSize: 20, fontWeight: 800, color: ACCENT, flex: 1 }}>MANUTELOS</div>
       {user && <div style={{ fontSize: 10, color: '#64748B', textAlign: 'right' }}>
         <div style={{ color: '#334155', fontWeight: 600 }}>{user.nome}</div>
         <div style={{ color: pC(user.perfil), fontSize: 9 }}>{pI(user.perfil)} {pL(user.perfil)}</div>
@@ -28,7 +28,7 @@ export default function Layout({ page, setPage, children, vp, user, onLogout, al
       transition: 'transform .3s', boxShadow: !vp.isDesktop && open ? '4px 0 20px rgba(0,0,0,.06)' : 'none',
     }}>
       <div style={{ padding: '24px 20px 16px', borderBottom: '1px solid #E2E8F0' }}>
-        <div style={{ fontSize: 30, fontWeight: 900, color: ACCENT, letterSpacing: 2 }}>TELOS</div>
+        <div style={{ fontSize: 30, fontWeight: 900, color: ACCENT, letterSpacing: 2 }}>MANUTELOS</div>
         <div style={{ fontSize: 9, color: '#94A3B8', letterSpacing: 2, marginTop: 2 }}>GESTÃO DE MANUTENÇÃO</div>
       </div>
       {user && <div style={{ padding: '12px 20px', borderBottom: '1px solid #E2E8F0', background: '#F8FAFC' }}>
@@ -47,7 +47,7 @@ export default function Layout({ page, setPage, children, vp, user, onLogout, al
           cursor: 'pointer', textAlign: 'left', minHeight: 42,
         }}><span style={{ fontSize: 16 }}>{n.icon}</span>{n.label}</button>)}
       </nav>
-      <div style={{ padding: '12px 20px', borderTop: '1px solid #E2E8F0', fontSize: 10, color: '#CBD5E1' }}>v3.0 · Telos</div>
+      <div style={{ padding: '12px 20px', borderTop: '1px solid #E2E8F0', fontSize: 10, color: '#CBD5E1' }}>v3.0 · ManuTelos</div>
     </aside>
     {vp.isMobile && <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 60, background: '#FFF', borderTop: '1px solid #E2E8F0', display: 'flex', zIndex: 200, boxShadow: '0 -1px 4px rgba(0,0,0,0.04)' }}>
       {navItems.slice(0, 6).map(n => <button key={n.key} onClick={() => go(n.key)} style={{

@@ -20,7 +20,7 @@ export default function Login({ onLogin }) {
       })
       const result = await res.json()
       if (!res.ok || result.error) { setErro(result.error || 'Email ou senha incorretos'); setLoading(false); return }
-      localStorage.setItem('telos_user', JSON.stringify(result.user))
+      localStorage.setItem('manutelos_user', JSON.stringify(result.user))
       onLogin(result.user); setLoading(false)
     } catch {
       setErro('Erro de conexão. Tente novamente.'); setLoading(false)
@@ -30,7 +30,7 @@ export default function Login({ onLogin }) {
   return <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 50%, #F8FAFC 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT, padding: 20 }}>
     <div style={{ background: '#FFF', borderRadius: 20, padding: '48px 40px', width: '100%', maxWidth: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.08)', border: '1px solid #E2E8F0' }}>
       <div style={{ textAlign: 'center', marginBottom: 36 }}>
-        <div style={{ fontSize: 48, fontWeight: 900, color: ACCENT, letterSpacing: 4 }}>TELOS</div>
+        <div style={{ fontSize: 48, fontWeight: 900, color: ACCENT, letterSpacing: 4 }}>MANUTELOS</div>
         <div style={{ fontSize: 11, color: '#94A3B8', letterSpacing: 3, marginTop: 4 }}>GESTÃO DE MANUTENÇÃO</div>
       </div>
       <form onSubmit={entrar}>
@@ -51,7 +51,7 @@ export default function Login({ onLogin }) {
           {loading ? 'Entrando...' : 'ENTRAR'}
         </button>
       </form>
-      <div style={{ marginTop: 24, textAlign: 'center', fontSize: 10, color: '#CBD5E1' }}>Fábrica de Algodão Telos · v3.0</div>
+      <div style={{ marginTop: 24, textAlign: 'center', fontSize: 10, color: '#CBD5E1' }}>Fábrica de Algodão Telos · ManuTelos v3.0</div>
     </div>
   </div>
 }

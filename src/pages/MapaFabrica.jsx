@@ -62,8 +62,8 @@ export default function MapaFabrica() {
       ;(openOS||[]).forEach(o => { ct[o.equipamento_id] = (ct[o.equipamento_id]||0)+1 })
       setOsCount(ct)
       try {
-        const sp = JSON.parse(localStorage.getItem('telos_map_pos') || '{}')
-        const ss = JSON.parse(localStorage.getItem('telos_map_sz') || '{}')
+        const sp = JSON.parse(localStorage.getItem('manutelos_map_pos') || '{}')
+        const ss = JSON.parse(localStorage.getItem('manutelos_map_sz') || '{}')
         if (Object.keys(sp).length > 0) { setPos(sp); setSz(ss) }
         else { autoLayout(a||[], e||[]) }
       } catch { autoLayout(a||[], e||[]) }
@@ -86,8 +86,8 @@ export default function MapaFabrica() {
   }
 
   const save = useCallback(() => {
-    localStorage.setItem('telos_map_pos', JSON.stringify(pos))
-    localStorage.setItem('telos_map_sz', JSON.stringify(sz))
+    localStorage.setItem('manutelos_map_pos', JSON.stringify(pos))
+    localStorage.setItem('manutelos_map_sz', JSON.stringify(sz))
   }, [pos, sz])
 
   const onDragStart = (id, e) => {
