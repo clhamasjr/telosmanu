@@ -1,0 +1,589 @@
+{
+  "sofman_cmms_xls_ordens_servico": {
+    "cols": [
+      "id",
+      "id_equipamento",
+      "id_tipo_manutencao",
+      "ordem_servico",
+      "equipamento",
+      "localizacao",
+      "tipo_manutencao",
+      "solicitante",
+      "descricao_solicitacao",
+      "descricao_execucao",
+      "observacoes",
+      "status",
+      "data_programada",
+      "data_emisao",
+      "tempo_maq_parada"
+    ],
+    "rows": [
+      {
+        "id": 1383,
+        "id_equipamento": 795,
+        "id_tipo_manutencao": 1,
+        "ordem_servico": 7557,
+        "equipamento": "PRD0001 - PREDIAL PRODUÇÃO ACABAMENTO",
+        "localizacao": "ACABAMENTO",
+        "tipo_manutencao": "CORRETIVA",
+        "solicitante": "Sidnei",
+        "descricao_solicitacao": "FALHA: Predial \r\n-------------------------------------------\r\nPortão de frente à exp. que entra na fábrica está duro de abrir e fechar",
+        "descricao_execucao": null,
+        "observacoes": "RECEBIDO POR: Francinaldo\r\nHora(Entregue): 14:05\r\nSETOR: Produção \r\nEXECUTADO POR: Gláucio \r\nRESP. PELA MANUTENÇÃO: Wanderley\r\nLIBERADO POR: Wanderley\r\nDATA HORA INICIO: 10/08/2021 14:00\r\nDATA HORA TERMINO: 10/08/2021 16:20\r\nHORAS APLICADAS: 02:20\r\nSERVIÇO EXECUTADO: Lixamento da superfície externa e guia superior/inferior, limpeza com thinner e aplicado convertedor de ferrugem",
+        "status": "ENCERRADO",
+        "data_programada": "2019-01-08T14:05:00.000Z",
+        "data_emisao": "2021-09-01T00:02:30.000Z",
+        "tempo_maq_parada": 0
+      },
+      {
+        "id": 1384,
+        "id_equipamento": 689,
+        "id_tipo_manutencao": 1,
+        "ordem_servico": 11334,
+        "equipamento": "VAP - LAVADORA DE ALTA PRESSÃO",
+        "localizacao": "FÁBRICA",
+        "tipo_manutencao": "CORRETIVA",
+        "solicitante": "Roque",
+        "descricao_solicitacao": "FALHA: Mecânica\n-------------------------------------------\nRoda do carrinho da lava jato quebrou",
+        "descricao_execucao": null,
+        "observacoes": "RECEBIDO POR: Robson\nHora(Entregue): 16:25\nSETOR: Abridor\nEXECUTADO POR: Wanderley\nRESP. PELA MANUTENÇÃO: Wanderley\nLIBERADO POR: Rodrigo\nDATA HORA INICIO: 04/02/2020 08:25\nDATA HORA TERMINO: 22/05/2021 11:50\nHORAS APLICADAS: 03:25\nSERVIÇO EXECUTADO: Comprar rodas wap Karcher HD 585. O.S. realizada junto com O.S. 13476",
+        "status": "ENCERRADO",
+        "data_programada": "2020-02-01T16:25:00.000Z",
+        "data_emisao": "2021-09-01T00:02:30.000Z",
+        "tempo_maq_parada": 0
+      },
+      {
+        "id": 1385,
+        "id_equipamento": 795,
+        "id_tipo_manutencao": 1,
+        "ordem_servico": 13051,
+        "equipamento": "PRD0001 - PREDIAL PRODUÇÃO ACABAMENTO",
+        "localizacao": "ACABAMENTO",
+        "tipo_manutencao": "CORRETIVA",
+        "solicitante": "Marilu",
+        "descricao_solicitacao": "FALHA: Predial \r\n-------------------------------------------\r\nDuas pias quebradas, da entrada da assepsia da fábrica",
+        "descricao_execucao": null,
+        "observacoes": "RECEBIDO POR: Ezequiel\r\nHora(Entregue): 11:30\r\nSETOR: Assepsia\r\nEXECUTADO POR: \r\nRESP. PELA MANUTENÇÃO: Wanderley\r\nLIBERADO POR: \r\nDATA HORA INICIO: 17/02/2020 12:00\r\nDATA HORA TERMINO: 00/01/1900 00:00\r\nHORAS APLICADAS: \r\nSERVIÇO EXECUTADO: Comprar",
+        "status": "ENCERRADO",
+        "data_programada": "2020-02-17T11:30:00.000Z",
+        "data_emisao": "2021-09-01T00:02:30.000Z",
+        "tempo_maq_parada": 0
+      }
+    ],
+    "total": 17781
+  },
+  "sofman_cmms_xls_apontamentohh": {
+    "cols": [
+      "id",
+      "id_ordem_servico",
+      "mantenedor",
+      "descricao_execucao",
+      "data_inicio",
+      "data_fim",
+      "tempo_hh",
+      "custo_hh"
+    ],
+    "rows": [
+      {
+        "id": 1,
+        "id_ordem_servico": 1,
+        "mantenedor": "WANDERLEY",
+        "descricao_execucao": "Destravada a escova e rearmado disjuntor",
+        "data_inicio": "2021-02-06T16:15:00.000Z",
+        "data_fim": "2021-02-06T16:35:00.000Z",
+        "tempo_hh": "0.3300",
+        "custo_hh": "23.8000"
+      },
+      {
+        "id": 2,
+        "id_ordem_servico": 2,
+        "mantenedor": "WANDERLEY",
+        "descricao_execucao": "Operador instruído quanto à reversão do DFK",
+        "data_inicio": "2021-02-26T09:20:00.000Z",
+        "data_fim": "2021-02-26T09:35:00.000Z",
+        "tempo_hh": "0.2500",
+        "custo_hh": "23.8000"
+      },
+      {
+        "id": 3,
+        "id_ordem_servico": 5,
+        "mantenedor": "FRANCINALDO",
+        "descricao_execucao": "Motor trocado e feito regulagem nas duas esteiras",
+        "data_inicio": "2021-01-14T07:20:00.000Z",
+        "data_fim": "2021-01-14T10:45:00.000Z",
+        "tempo_hh": "3.4200",
+        "custo_hh": "23.8000"
+      }
+    ],
+    "total": 23756
+  },
+  "sofman_cmms_xls_cad_equipamentos": {
+    "cols": [
+      "id",
+      "identificacao",
+      "descricao",
+      "localizacao",
+      "complemento",
+      "marca",
+      "modelo",
+      "n_serie",
+      "fabricante",
+      "familia",
+      "tipo",
+      "centro_custo",
+      "status",
+      "imagem"
+    ],
+    "rows": [
+      {
+        "id": 1,
+        "identificacao": "DK0001",
+        "descricao": "CARDA DK 903 LINHA D",
+        "localizacao": "LINHA D",
+        "complemento": "",
+        "marca": "TRÜTZSCHLER",
+        "modelo": "DK 903",
+        "n_serie": "",
+        "fabricante": "TRÜTZSCHLER",
+        "familia": "CARDAS",
+        "tipo": "",
+        "centro_custo": "",
+        "status": "ATIVO",
+        "imagem": null
+      },
+      {
+        "id": 2,
+        "identificacao": "CAD0002",
+        "descricao": "CARDA LINHA D",
+        "localizacao": "LINHA D",
+        "complemento": "",
+        "marca": "TRÜTZSCHLER",
+        "modelo": "TC 7",
+        "n_serie": "",
+        "fabricante": "TRÜTZSCHLER",
+        "familia": "CARDAS",
+        "tipo": "",
+        "centro_custo": "",
+        "status": "ATIVO",
+        "imagem": null
+      },
+      {
+        "id": 4,
+        "identificacao": "CAD0003",
+        "descricao": "CARDA LINHA D",
+        "localizacao": "LINHA D",
+        "complemento": "",
+        "marca": "TRÜTZSCHLER",
+        "modelo": "TC 7",
+        "n_serie": "",
+        "fabricante": "TRÜTZSCHLER",
+        "familia": "CARDAS",
+        "tipo": "",
+        "centro_custo": "",
+        "status": "ATIVO",
+        "imagem": null
+      }
+    ],
+    "total": 549
+  },
+  "sofman_cmms_xls_cad_mantenedores": {
+    "cols": [
+      "id",
+      "nome",
+      "cargo",
+      "custo_hora"
+    ],
+    "rows": [
+      {
+        "id": 2,
+        "nome": "ELVIS",
+        "cargo": "AUXILIAR DE MANUTENÇÃO",
+        "custo_hora": "23.8000"
+      },
+      {
+        "id": 3,
+        "nome": "WANDERLEY",
+        "cargo": "SUPERVISOR DE MANUTENÇÃO",
+        "custo_hora": "23.8000"
+      },
+      {
+        "id": 4,
+        "nome": "EZEQUIEL",
+        "cargo": "MECÂNICO DE MANUTENÇÃO",
+        "custo_hora": "23.8000"
+      }
+    ],
+    "total": 44
+  },
+  "sofman_cmms_xls_cad_materiais": {
+    "cols": [
+      "id",
+      "codigo",
+      "descricao",
+      "unidade",
+      "custo",
+      "marca",
+      "localizacao",
+      "estoque_min",
+      "status",
+      "saldo_disponivel"
+    ],
+    "rows": [
+      {
+        "id": 1,
+        "codigo": "COR0012",
+        "descricao": "CORRENTE SIMPLES ASA 40 1/2\"",
+        "unidade": "METROS",
+        "custo": "28.0000",
+        "marca": "KTS",
+        "localizacao": "1202",
+        "estoque_min": 1,
+        "status": "REPOR",
+        "saldo_disponivel": 0
+      },
+      {
+        "id": 2,
+        "codigo": "ROL3122",
+        "descricao": "ROLAMENTO G210-31 V22",
+        "unidade": "PEÇA",
+        "custo": "124.0000",
+        "marca": "FRM",
+        "localizacao": "1104",
+        "estoque_min": 0,
+        "status": "LIMITE",
+        "saldo_disponivel": 0
+      },
+      {
+        "id": 3,
+        "codigo": "MAP0210",
+        "descricao": "MANCAL PEDESTAL P210",
+        "unidade": "PEÇA",
+        "custo": "57.0000",
+        "marca": "FRM",
+        "localizacao": "1002",
+        "estoque_min": 0,
+        "status": "LIMITE",
+        "saldo_disponivel": 0
+      }
+    ],
+    "total": 85
+  },
+  "sofman_cmms_xls_cad_fornecedores": {
+    "cols": [
+      "id",
+      "razao_social",
+      "cnpj"
+    ],
+    "rows": [
+      {
+        "id": 1,
+        "razao_social": "P H DINIZ FERRAMENTAS SOROCABA-ME",
+        "cnpj": "23.863.306/0001-77"
+      },
+      {
+        "id": 2,
+        "razao_social": "ROLLER-SUL IMPORTAÇÃO E COMÉRCIO LTDA",
+        "cnpj": "78.859.196/0001-61"
+      },
+      {
+        "id": 3,
+        "razao_social": "WALB MOLAS E ARTEFATOS DE ARAMES",
+        "cnpj": "04.006.472/0001-02"
+      }
+    ],
+    "total": 14
+  },
+  "sofman_cmms_xls_cad_centro_custo": {
+    "cols": [
+      "id",
+      "codigo",
+      "descricao"
+    ],
+    "rows": [
+      {
+        "id": 1,
+        "codigo": "1",
+        "descricao": "ACABAMENTO"
+      },
+      {
+        "id": 2,
+        "codigo": "2",
+        "descricao": "BRANQUEAMENTO"
+      },
+      {
+        "id": 5,
+        "codigo": "3",
+        "descricao": "EQUIPAMENTOS"
+      }
+    ],
+    "total": 3
+  },
+  "sofman_cmms_xls_cad_tarefas": {
+    "cols": [
+      "id",
+      "descricao"
+    ],
+    "rows": [
+      {
+        "id": 64,
+        "descricao": "Reparar plataformas de inspeção "
+      },
+      {
+        "id": 65,
+        "descricao": "Manutenção no filtro multiciclone (oxidação)"
+      },
+      {
+        "id": 66,
+        "descricao": "Alongar tubo de saída da descarga de alívio (danificando estrutura da caldeira Arauterm)"
+      }
+    ],
+    "total": 441
+  },
+  "sofman_cmms_xls_cad_familias_equipamento": {
+    "cols": [
+      "id",
+      "descricao"
+    ],
+    "rows": [
+      {
+        "id": 1,
+        "descricao": "CARDAS"
+      },
+      {
+        "id": 3,
+        "descricao": "CALANDRAS"
+      },
+      {
+        "id": 4,
+        "descricao": "UMIDIFICADORES"
+      }
+    ],
+    "total": 24
+  },
+  "sofman_cmms_xls_cad_tipos_manutencao": {
+    "cols": [
+      "id",
+      "descricao"
+    ],
+    "rows": [
+      {
+        "id": 1,
+        "descricao": "CORRETIVA"
+      },
+      {
+        "id": 2,
+        "descricao": "MANUTENÇÃO PREVENTIVA ELÉTRICA"
+      },
+      {
+        "id": 3,
+        "descricao": "MANUTENÇÃO PREVENTIVA "
+      }
+    ],
+    "total": 6
+  },
+  "sofman_cmms_xls_planejamento_manutencao": {
+    "cols": [
+      "id",
+      "id_equipamento",
+      "equipamento",
+      "tipo_manutencao",
+      "descricao",
+      "localizacao",
+      "status"
+    ],
+    "rows": [
+      {
+        "id": 151,
+        "id_equipamento": 31,
+        "equipamento": "QDR0001 - QUADRADINHO 01",
+        "tipo_manutencao": "MANUTENÇÃO PREVENTIVA ",
+        "descricao": "Manutenção Periódica Quadradinho 1",
+        "localizacao": "ACABAMENTO",
+        "status": "DESATIVADO"
+      },
+      {
+        "id": 152,
+        "id_equipamento": 32,
+        "equipamento": "QDR0002 - QUADRADINHO 02",
+        "tipo_manutencao": "MANUTENÇÃO PREVENTIVA ",
+        "descricao": "Manutenção Periódica Quadradinho 2",
+        "localizacao": "ACABAMENTO",
+        "status": "DESATIVADO"
+      },
+      {
+        "id": 153,
+        "id_equipamento": 33,
+        "equipamento": "QDR0003 - QUADRADINHO 03",
+        "tipo_manutencao": "MANUTENÇÃO PREVENTIVA ",
+        "descricao": "Manutenção Periódica Quadradinho 3",
+        "localizacao": "ACABAMENTO",
+        "status": "DESATIVADO"
+      }
+    ],
+    "total": 70
+  },
+  "sofman_cmms_xls_tarefas_planejamento_manutencao": {
+    "cols": [
+      "id",
+      "id_planejamento",
+      "id_tarefa",
+      "sequencia_item",
+      "tarefa",
+      "tempo_exe",
+      "periodicidade",
+      "data_base",
+      "antecipacao"
+    ],
+    "rows": [
+      {
+        "id": 142,
+        "id_planejamento": 134,
+        "id_tarefa": 67,
+        "sequencia_item": 1,
+        "tarefa": "Confeccionar e instalar guarda corpo na escada marinheiro e plataforma do reservatório, instalar antiderrapante nos degraus",
+        "tempo_exe": "1000",
+        "periodicidade": 1000,
+        "data_base": "2025-08-27T00:00:00.000Z",
+        "antecipacao": 1
+      },
+      {
+        "id": 143,
+        "id_planejamento": 134,
+        "id_tarefa": 68,
+        "sequencia_item": 2,
+        "tarefa": "Realizar manutenção estrutural na base do reservatório (oxidação)",
+        "tempo_exe": "1000",
+        "periodicidade": 1000,
+        "data_base": "2025-08-27T00:00:00.000Z",
+        "antecipacao": 1
+      },
+      {
+        "id": 153,
+        "id_planejamento": 138,
+        "id_tarefa": 78,
+        "sequencia_item": 1,
+        "tarefa": "Confeccionar 7 buchas de bronze para trava da tampa ",
+        "tempo_exe": "1000",
+        "periodicidade": 1000,
+        "data_base": "2025-09-07T00:00:00.000Z",
+        "antecipacao": 1
+      }
+    ],
+    "total": 442
+  },
+  "sofman_cmms_xls_materiais_ordem_servico": {
+    "cols": [
+      "id",
+      "id_ordem_servico",
+      "id_requisicao",
+      "id_material",
+      "descricao_material",
+      "unidade_material",
+      "quantidade_material",
+      "custo_material",
+      "data"
+    ],
+    "rows": [
+      {
+        "id": 6,
+        "id_ordem_servico": 2909,
+        "id_requisicao": null,
+        "id_material": 2,
+        "descricao_material": "ROLAMENTO G210-31 V22",
+        "unidade_material": "PEÇA",
+        "quantidade_material": "2.0000",
+        "custo_material": "124.0000",
+        "data": "2021-09-30T00:00:00.000Z"
+      },
+      {
+        "id": 7,
+        "id_ordem_servico": 2909,
+        "id_requisicao": null,
+        "id_material": 3,
+        "descricao_material": "MANCAL PEDESTAL P210",
+        "unidade_material": "PEÇA",
+        "quantidade_material": "2.0000",
+        "custo_material": "57.0000",
+        "data": "2021-09-30T00:00:00.000Z"
+      },
+      {
+        "id": 8,
+        "id_ordem_servico": 2045,
+        "id_requisicao": null,
+        "id_material": 8,
+        "descricao_material": "CHAPA INOX 304 2 X 3000 X 1240MM",
+        "unidade_material": "PEÇA",
+        "quantidade_material": "1.0000",
+        "custo_material": "2976.0000",
+        "data": "2021-06-30T00:00:00.000Z"
+      }
+    ],
+    "total": 38
+  },
+  "sofman_cmms_xls_entrada_materiais": {
+    "cols": [
+      "id",
+      "nf",
+      "fornecedor",
+      "data"
+    ],
+    "rows": [
+      {
+        "id": 1,
+        "nf": "3245",
+        "fornecedor": "P H DINIZ FERRAMENTAS SOROCABA-ME",
+        "data": "2021-03-15T00:00:00.000Z"
+      },
+      {
+        "id": 2,
+        "nf": "116445",
+        "fornecedor": "ROLLER-SUL IMPORTAÇÃO E COMÉRCIO LTDA",
+        "data": "2025-05-20T00:00:00.000Z"
+      },
+      {
+        "id": 3,
+        "nf": "16822",
+        "fornecedor": "WALB MOLAS E ARTEFATOS DE ARAMES",
+        "data": "2021-09-03T00:00:00.000Z"
+      }
+    ],
+    "total": 49
+  },
+  "sofman_cmms_xls_itens_entrada_materiais": {
+    "cols": [
+      "id",
+      "id_entrada",
+      "id_material",
+      "descricao",
+      "quantidade",
+      "preco"
+    ],
+    "rows": [
+      {
+        "id": 1,
+        "id_entrada": 1,
+        "id_material": 1,
+        "descricao": "CORRENTE SIMPLES ASA 40 1/2\"",
+        "quantidade": "5.0000",
+        "preco": "28.0000"
+      },
+      {
+        "id": 2,
+        "id_entrada": 2,
+        "id_material": 2,
+        "descricao": "ROLAMENTO G210-31 V22",
+        "quantidade": "2.0000",
+        "preco": "124.0000"
+      },
+      {
+        "id": 3,
+        "id_entrada": 2,
+        "id_material": 3,
+        "descricao": "MANCAL PEDESTAL P210",
+        "quantidade": "2.0000",
+        "preco": "57.0000"
+      }
+    ],
+    "total": 76
+  }
+}

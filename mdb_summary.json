@@ -1,0 +1,417 @@
+{
+  "Cópia de sofman_cmms_xls_apontamentohh": {
+    "count": 248,
+    "cols": [
+      "id",
+      "id_ordem_servico",
+      "ordem",
+      "mantenedor",
+      "descricao_execucao",
+      "data_inicio",
+      "data_fim",
+      "tempo_hh",
+      "custo_hh"
+    ]
+  },
+  "Cópia de sofman_cmms_xls_apontamentohh_2": {
+    "count": 434,
+    "cols": [
+      "id",
+      "id_ordem_servico",
+      "mantenedor",
+      "descricao_execucao",
+      "data_inicio",
+      "data_fim",
+      "tempo_hh",
+      "custo_hh"
+    ]
+  },
+  "Cópia de sofman_cmms_xls_apontamentohh_3": {
+    "count": 1385,
+    "cols": [
+      "id",
+      "id_ordem_servico",
+      "mantenedor",
+      "descricao_execucao",
+      "data_inicio",
+      "data_fim",
+      "tempo_hh",
+      "custo_hh"
+    ]
+  },
+  "Cópia de sofman_cmms_xls_ordens_servico": {
+    "count": 1381,
+    "cols": [
+      "id",
+      "id_equipamento",
+      "ordem_servico",
+      "equipamento",
+      "localizacao",
+      "tipo_manutencao",
+      "solicitante",
+      "descricao_solicitacao",
+      "descricao_execucao",
+      "observacoes",
+      "status",
+      "data_programada",
+      "data_emisao",
+      "tempo_maq_parada"
+    ]
+  },
+  "Erros ao colar": {
+    "count": 1376,
+    "cols": [
+      "F1",
+      "F2",
+      "F3",
+      "F4",
+      "F5",
+      "F6",
+      "F7"
+    ]
+  },
+  "import_os": {
+    "count": 1375,
+    "cols": [
+      "id",
+      "maquina",
+      "id_maquina"
+    ]
+  },
+  "sofman_cmms_xls_apontamentohh": {
+    "count": 23756,
+    "cols": [
+      "id",
+      "id_ordem_servico",
+      "mantenedor",
+      "descricao_execucao",
+      "data_inicio",
+      "data_fim",
+      "tempo_hh",
+      "custo_hh"
+    ]
+  },
+  "sofman_cmms_xls_apontamentohh_4": {
+    "count": 1380,
+    "cols": [
+      "id",
+      "id_ordem_servico",
+      "mantenedor",
+      "descricao_execucao",
+      "data_inicio",
+      "data_fim",
+      "tempo_hh",
+      "custo_hh"
+    ]
+  },
+  "sofman_cmms_xls_cad_centro_custo": {
+    "count": 3,
+    "cols": [
+      "id",
+      "codigo",
+      "descricao"
+    ]
+  },
+  "sofman_cmms_xls_cad_diversos": {
+    "count": 0,
+    "cols": [
+      "id",
+      "descricao",
+      "unidade",
+      "custo"
+    ]
+  },
+  "sofman_cmms_xls_cad_familias_equipamento": {
+    "count": 24,
+    "cols": [
+      "id",
+      "descricao"
+    ]
+  },
+  "sofman_cmms_xls_cad_fornecedores": {
+    "count": 14,
+    "cols": [
+      "id",
+      "razao_social",
+      "cnpj"
+    ]
+  },
+  "sofman_cmms_xls_cad_mantenedores": {
+    "count": 44,
+    "cols": [
+      "id",
+      "nome",
+      "cargo",
+      "custo_hora"
+    ]
+  },
+  "sofman_cmms_xls_cad_materiais": {
+    "count": 85,
+    "cols": [
+      "id",
+      "codigo",
+      "descricao",
+      "unidade",
+      "custo",
+      "marca",
+      "localizacao",
+      "estoque_min",
+      "status",
+      "saldo_disponivel"
+    ]
+  },
+  "sofman_cmms_xls_cad_status_ordem_servico": {
+    "count": 3,
+    "cols": [
+      "id",
+      "descricao"
+    ]
+  },
+  "sofman_cmms_xls_cad_tarefas": {
+    "count": 441,
+    "cols": [
+      "id",
+      "descricao"
+    ]
+  },
+  "sofman_cmms_xls_cad_tipos_equipamento": {
+    "count": 3,
+    "cols": [
+      "id",
+      "descricao"
+    ]
+  },
+  "sofman_cmms_xls_diversos_ordem_servico": {
+    "count": 0,
+    "cols": [
+      "id",
+      "id_ordem_servico",
+      "descricao_diverso",
+      "unidade_diverso",
+      "quantidade_diverso",
+      "custo_diverso",
+      "data_diverso"
+    ]
+  },
+  "sofman_cmms_xls_entrada_materiais": {
+    "count": 49,
+    "cols": [
+      "id",
+      "nf",
+      "fornecedor",
+      "data"
+    ]
+  },
+  "sofman_cmms_xls_itens_entrada_materiais": {
+    "count": 76,
+    "cols": [
+      "id",
+      "id_entrada",
+      "id_material",
+      "descricao",
+      "quantidade",
+      "preco"
+    ]
+  },
+  "sofman_cmms_xls_materiais_ordem_servico": {
+    "count": 38,
+    "cols": [
+      "id",
+      "id_ordem_servico",
+      "id_requisicao",
+      "id_material",
+      "descricao_material",
+      "unidade_material",
+      "quantidade_material",
+      "custo_material",
+      "data"
+    ]
+  },
+  "sofman_cmms_xls_materiais_planejamento_manutencao": {
+    "count": 1,
+    "cols": [
+      "id",
+      "id_planejamento_material",
+      "id_material",
+      "material",
+      "unidade",
+      "quantidade",
+      "custo"
+    ]
+  },
+  "sofman_cmms_xls_meta": {
+    "count": 0,
+    "cols": [
+      "id",
+      "mes",
+      "ano",
+      "meta"
+    ]
+  },
+  "sofman_cmms_xls_numeracao_ordem_servico": {
+    "count": 1,
+    "cols": [
+      "id",
+      "n_ordem"
+    ]
+  },
+  "sofman_cmms_xls_ordens_servico": {
+    "count": 17781,
+    "cols": [
+      "id",
+      "id_equipamento",
+      "id_tipo_manutencao",
+      "ordem_servico",
+      "equipamento",
+      "localizacao",
+      "tipo_manutencao",
+      "solicitante",
+      "descricao_solicitacao",
+      "descricao_execucao",
+      "observacoes",
+      "status",
+      "data_programada",
+      "data_emisao",
+      "tempo_maq_parada"
+    ]
+  },
+  "sofman_cmms_xls_painel_historico": {
+    "count": 10,
+    "cols": [
+      "id",
+      "numero_grafico",
+      "nome_grafico",
+      "titulo_grafico",
+      "largura_grafico",
+      "altura_grafico",
+      "direita",
+      "esquerda",
+      "baixo",
+      "cima",
+      "tipo_grafico",
+      "cor_grafico",
+      "estilo_grafico"
+    ]
+  },
+  "sofman_cmms_xls_saida_materiais": {
+    "count": 6,
+    "cols": [
+      "id",
+      "numero_ordem",
+      "requisicao",
+      "data",
+      "finalidade_historico",
+      "centro_custo",
+      "solicitante"
+    ]
+  },
+  "sofman_cmms_xls_tarefas_datas_planejamento_manutencao": {
+    "count": 68812,
+    "cols": [
+      "id",
+      "id_planejamento",
+      "id_programacao_tarefa",
+      "tempo_exe",
+      "data_base"
+    ]
+  },
+  "sofman_cmms_xls_tarefas_ordem_servico": {
+    "count": 0,
+    "cols": [
+      "id",
+      "id_ordem_servico",
+      "id_tarefa",
+      "descricao_tarefa"
+    ]
+  },
+  "sofman_cmms_xls_tarefas_planejamento_manutencao": {
+    "count": 442,
+    "cols": [
+      "id",
+      "id_planejamento",
+      "id_tarefa",
+      "sequencia_item",
+      "tarefa",
+      "tempo_exe",
+      "periodicidade",
+      "data_base",
+      "antecipacao"
+    ]
+  },
+  "sofman_cmms_xls_users": {
+    "count": 4,
+    "cols": [
+      "id",
+      "login",
+      "name",
+      "email",
+      "pass",
+      "status"
+    ]
+  },
+  "tab_aux": {
+    "count": 1217,
+    "cols": [
+      "id",
+      "id_ordem",
+      "id_maquina"
+    ]
+  },
+  "Cópia de sofman_cmms_xls_cad_equipamentos": {
+    "count": 45,
+    "cols": [
+      "id",
+      "identificacao",
+      "descricao",
+      "localizacao",
+      "complemento",
+      "marca",
+      "modelo",
+      "n_serie",
+      "fabricante",
+      "familia",
+      "tipo",
+      "centro_custo",
+      "status",
+      "imagem"
+    ]
+  },
+  "sofman_cmms_xls_cad_equipamentos": {
+    "count": 549,
+    "cols": [
+      "id",
+      "identificacao",
+      "descricao",
+      "localizacao",
+      "complemento",
+      "marca",
+      "modelo",
+      "n_serie",
+      "fabricante",
+      "familia",
+      "tipo",
+      "centro_custo",
+      "status",
+      "imagem"
+    ]
+  },
+  "sofman_cmms_xls_cad_tipos_manutencao": {
+    "count": 6,
+    "cols": [
+      "id",
+      "descricao"
+    ]
+  },
+  "sofman_cmms_xls_planejamento_manutencao": {
+    "count": 70,
+    "cols": [
+      "id",
+      "id_equipamento",
+      "equipamento",
+      "tipo_manutencao",
+      "descricao",
+      "localizacao",
+      "status"
+    ]
+  }
+}

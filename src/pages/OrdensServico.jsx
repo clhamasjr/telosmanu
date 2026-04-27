@@ -48,7 +48,7 @@ export default function OrdensServico({ initialStatusFilter, onClearFilter }) {
       setLoading(true); const {from,to}=pAtivo; let all=[],pg=0
       while(true){
         const{data:rows}=await supabase.from('ordens_servico')
-          .select('id,numero_ordem,titulo,descricao,descricao_execucao,prioridade,data_abertura,data_inicio,data_conclusao,tempo_execucao_min,solicitante,executado_por,recebido_por,observacoes,equipamento_id,equipamentos(id,nome,codigo,area_id),areas(id,nome),status_os(id,nome,cor,cor_bg,icone),tipos_manutencao(id,nome),tipos_falha(id,nome),mecanicos(id,nome)')
+          .select('id,numero_ordem,titulo,descricao,descricao_execucao,prioridade,data_abertura,data_inicio,data_conclusao,data_recebimento,tempo_execucao_min,solicitante,executado_por,recebido_por,resp_manutencao,liberado_por,observacoes,tem_pendencia,pendencia_melhoria,pendencia_terceiros,pendencia_aguard_material,equipamento_id,equipamentos(id,nome,codigo,area_id),areas(id,nome),status_os(id,nome,cor,cor_bg,icone),tipos_manutencao(id,nome),tipos_falha(id,nome),mecanicos(id,nome)')
           .gte('data_abertura',from+'T00:00:00').lte('data_abertura',to+'T23:59:59')
           .order('data_abertura',{ascending:false}).range(pg*500,(pg+1)*500-1)
         if(c||!rows||rows.length===0)break; all=all.concat(rows)
@@ -83,7 +83,9 @@ export default function OrdensServico({ initialStatusFilter, onClearFilter }) {
   const novaOS = () => {
     setOs({
       numero_ordem:'', equipamento_id:'', area_id:'', tipo_manutencao_id:'', tipo_falha_id:'',
-      descricao:'', prioridade:'Media', solicitante:user?.nome||'', observacoes:'',
+      descricao:'', descricao_execucao:'', prioridade:'Media', solicitante:user?.nome||'', observacoes:'',
+      recebido_por:'', data_recebimento:'', executado_por:'', resp_manutencao:'', liberado_por:'',
+      tem_pendencia:false, pendencia_melhoria:false, pendencia_terceiros:false, pendencia_aguard_material:false,
       status_id:statusList.find(s=>s.nome==='Aberta')?.id||'',
     })
     setModal('nova')
@@ -250,14 +252,54 @@ function OSForm({os,setOs,onSave,onCancel,onDel,areas,equipamentos,mecanicos,sta
       <Field label="Prioridade"><select style={S.select} value={os.prioridade||'Media'} onChange={e=>u('prioridade',e.target.value)}>{Object.entries(PRIO_LABEL).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></Field>
       {isEdit&&<Field label="Status"><select style={S.select} value={os.status_id||''} onChange={e=>u('status_id',e.target.value)}>{statusList.map(s=><option key={s.id} value={s.id}>{s.icone} {s.nome}</option>)}</select></Field>}
     </div>
-    <Field label="Descrição do Problema / Serviço" req>
+    {/* Recebimento */}
+    {!isSolic&&<div style={{display:'grid',gridTemplateColumns:mobile?'1fr':'1fr 1fr',gap:'0 14px'}}>
+      <Field label="Recebido por"><input style={S.input} value={os.recebido_por||''} onChange={e=>u('recebido_por',e.target.value)}/></Field>
+      <Field label="Data/Hora Recebimento"><input type="datetime-local" style={S.input} value={os.data_recebimento?os.data_recebimento.substring(0,16):''} onChange={e=>u('data_recebimento',e.target.value?e.target.value+':00':null)}/></Field>
+    </div>}
+
+    <Field label="Descrição do Problema" req>
       {descPadrao.length>0&&<select style={{...S.select,marginBottom:6,fontSize:11,color:'#64748B'}} value="" onChange={e=>{if(e.target.value)u('descricao',(os.descricao?os.descricao+'. ':'')+e.target.value)}}>
         <option value="">📋 Selecionar descrição padrão...</option>
         {Object.entries(descByCat).map(([cat,items])=><optgroup key={cat} label={cat}>{items.map(d=><option key={d.id} value={d.descricao}>{d.descricao}</option>)}</optgroup>)}
       </select>}
-      <textarea style={{...S.input,minHeight:80,resize:'vertical'}} value={os.descricao||''} onChange={e=>u('descricao',e.target.value)} placeholder="Descreva o problema"/>
+      <textarea style={{...S.input,minHeight:70,resize:'vertical'}} value={os.descricao||''} onChange={e=>u('descricao',e.target.value)} placeholder="Descreva o problema"/>
     </Field>
-    {!isSolic&&<Field label="Observações"><textarea style={{...S.input,minHeight:50,resize:'vertical'}} value={os.observacoes||''} onChange={e=>u('observacoes',e.target.value)}/></Field>}
+
+    {!isSolic&&<>
+      <Field label="Descrição do Serviço Executado">
+        <textarea style={{...S.input,minHeight:70,resize:'vertical'}} value={os.descricao_execucao||''} onChange={e=>u('descricao_execucao',e.target.value)} placeholder="Descreva o que foi executado"/>
+      </Field>
+
+      {/* Pendências */}
+      <div style={{background:'#FFFBEB',borderRadius:8,padding:12,marginTop:8,marginBottom:14,border:'1px solid #FCD34D'}}>
+        <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:os.tem_pendencia?10:0,flexWrap:'wrap'}}>
+          <span style={{fontSize:11,fontWeight:700,color:'#92400E',textTransform:'uppercase'}}>Medidas a realizar / Pendências?</span>
+          <label style={{display:'flex',alignItems:'center',gap:5,cursor:'pointer',fontSize:12}}><input type="radio" checked={os.tem_pendencia===true} onChange={()=>u('tem_pendencia',true)}/>SIM</label>
+          <label style={{display:'flex',alignItems:'center',gap:5,cursor:'pointer',fontSize:12}}><input type="radio" checked={!os.tem_pendencia} onChange={()=>setOs({...os,tem_pendencia:false,pendencia_melhoria:false,pendencia_terceiros:false,pendencia_aguard_material:false})}/>NÃO</label>
+        </div>
+        {os.tem_pendencia&&<div style={{display:'flex',gap:14,flexWrap:'wrap'}}>
+          <label style={{display:'flex',alignItems:'center',gap:5,cursor:'pointer',fontSize:12,color:'#334155'}}><input type="checkbox" checked={!!os.pendencia_melhoria} onChange={e=>u('pendencia_melhoria',e.target.checked)}/>ME - Melhoria</label>
+          <label style={{display:'flex',alignItems:'center',gap:5,cursor:'pointer',fontSize:12,color:'#334155'}}><input type="checkbox" checked={!!os.pendencia_terceiros} onChange={e=>u('pendencia_terceiros',e.target.checked)}/>Por Conta de Terceiros</label>
+          <label style={{display:'flex',alignItems:'center',gap:5,cursor:'pointer',fontSize:12,color:'#334155'}}><input type="checkbox" checked={!!os.pendencia_aguard_material} onChange={e=>u('pendencia_aguard_material',e.target.checked)}/>Aguardando Material</label>
+        </div>}
+      </div>
+
+      <Field label="Observações"><textarea style={{...S.input,minHeight:50,resize:'vertical'}} value={os.observacoes||''} onChange={e=>u('observacoes',e.target.value)}/></Field>
+
+      {/* Responsáveis */}
+      <div style={{display:'grid',gridTemplateColumns:mobile?'1fr':'1fr 1fr 1fr',gap:'0 14px',marginTop:6}}>
+        <Field label="Executado por"><input style={S.input} value={os.executado_por||''} onChange={e=>u('executado_por',e.target.value)}/></Field>
+        <Field label="Resp. Manutenção"><input style={S.input} value={os.resp_manutencao||''} onChange={e=>u('resp_manutencao',e.target.value)}/></Field>
+        <Field label="Liberado por"><input style={S.input} value={os.liberado_por||''} onChange={e=>u('liberado_por',e.target.value)}/></Field>
+      </div>
+
+      {/* Datas serviço */}
+      <div style={{display:'grid',gridTemplateColumns:mobile?'1fr':'1fr 1fr',gap:'0 14px'}}>
+        <Field label="Início do Serviço"><input type="datetime-local" style={S.input} value={os.data_inicio?os.data_inicio.substring(0,16):''} onChange={e=>u('data_inicio',e.target.value?e.target.value+':00':null)}/></Field>
+        <Field label="Término do Serviço"><input type="datetime-local" style={S.input} value={os.data_conclusao?os.data_conclusao.substring(0,16):''} onChange={e=>u('data_conclusao',e.target.value?e.target.value+':00':null)}/></Field>
+      </div>
+    </>}
 
     {/* Materials section in edit mode */}
     {isEdit&&os.id&&<OSMateriais osId={os.id}/>}
@@ -397,8 +439,13 @@ function OSDetail({os,onEdit,onAtender,onAprovar,mobile,perfil,mecanicos:allMec}
       </div>
     </div>
     <R l="Solicitante" v={os.solicitante} a={ACCENT}/><R l="Data Abertura" v={fmtDT(os.data_abertura)}/>
-    {os.tipos_falha&&<R l="Falha" v={os.tipos_falha.nome}/>}
+    {os.recebido_por&&<R l="Recebido por" v={os.recebido_por}/>}
+    {os.data_recebimento&&<R l="Data Recebimento" v={fmtDT(os.data_recebimento)}/>}
+    {os.tipos_falha&&<R l="Causa da Falha" v={os.tipos_falha.nome}/>}
     <R l="Prioridade" v={({Critica:'🔴 Crítica',Alta:'🟠 Alta',Media:'🟡 Média',Baixa:'🟢 Baixa'})[os.prioridade]}/>
+    {os.executado_por&&<R l="Executado por" v={os.executado_por}/>}
+    {os.resp_manutencao&&<R l="Resp. Manutenção" v={os.resp_manutencao}/>}
+    {os.liberado_por&&<R l="Liberado por" v={os.liberado_por}/>}
     {osMecs.length>0&&<div style={{padding:'5px 0',borderBottom:'1px solid #F1F5F9'}}>
       <span style={{fontSize:10,color:'#94A3B8',textTransform:'uppercase',fontWeight:600}}>Mecânicos</span>
       <div style={{display:'flex',gap:6,flexWrap:'wrap',marginTop:4}}>{osMecs.map(m=><span key={m.id} style={{...badge('#3B82F6'),fontSize:11}}>🔧 {m.mecanicos?.nome}</span>)}</div>
@@ -413,6 +460,14 @@ function OSDetail({os,onEdit,onAtender,onAprovar,mobile,perfil,mecanicos:allMec}
       </div>
       {os.descricao_execucao&&<div style={{marginTop:8}}><div style={{fontSize:9,color:'#94A3B8',marginBottom:3}}>SERVIÇO REALIZADO:</div><div style={{fontSize:12,color:'#0F172A',lineHeight:1.5}}>{os.descricao_execucao}</div></div>}
     </div>
+    {os.tem_pendencia&&<div style={{marginTop:10,background:'#FFFBEB',border:'1px solid #F59E0B',borderRadius:8,padding:12}}>
+      <div style={{fontSize:10,color:'#92400E',textTransform:'uppercase',fontWeight:700,marginBottom:6}}>⚠️ Pendências</div>
+      <div style={{display:'flex',gap:8,flexWrap:'wrap',fontSize:11}}>
+        {os.pendencia_melhoria&&<span style={{...badge('#F59E0B'),fontSize:11}}>ME - Melhoria</span>}
+        {os.pendencia_terceiros&&<span style={{...badge('#F59E0B'),fontSize:11}}>Por Conta de Terceiros</span>}
+        {os.pendencia_aguard_material&&<span style={{...badge('#F59E0B'),fontSize:11}}>Aguardando Material</span>}
+      </div>
+    </div>}
     {mats.length>0&&<div style={{marginTop:12}}><div style={{fontSize:10,color:'#94A3B8',textTransform:'uppercase',fontWeight:600,marginBottom:6}}>📦 Materiais / Diversos</div>
       <table style={{width:'100%',borderCollapse:'collapse'}}><thead><tr><th style={{...S.th,fontSize:9,padding:'4px 6px'}}>Descrição</th><th style={{...S.th,fontSize:9,padding:'4px 6px'}}>Un.</th><th style={{...S.th,fontSize:9,padding:'4px 6px'}}>Qtde</th></tr></thead>
       <tbody>{mats.map(m=><tr key={m.id}><td style={{...S.td,fontSize:11,padding:'4px 6px'}}>{m.materiais?.nome||m.descricao}</td><td style={{...S.td,fontSize:11,padding:'4px 6px',color:'#64748B'}}>{m.materiais?.unidade}</td><td style={{...S.td,fontSize:11,padding:'4px 6px',color:'#3B82F6',fontWeight:700}}>{m.quantidade}</td></tr>)}</tbody></table></div>}
