@@ -471,10 +471,108 @@ export function Preventiva() {
   const vencidos = data.filter(p => p.ativo !== false && p.data_programada && new Date(p.data_programada) < new Date())
   const proximos = data.filter(p => p.ativo !== false && p.data_programada && new Date(p.data_programada) >= new Date()).slice(0, 10)
 
+  const exportarCSV = async () => {
+    const ativos = data.filter(p => p.ativo !== false)
+    if (ativos.length === 0) { alert('Nenhum plano para exportar'); return }
+    // Buscar materiais de todos os planos
+    const ids = ativos.map(p => p.id)
+    let allMats = []
+    for (let i = 0; i < ids.length; i += 200) {
+      const batch = ids.slice(i, i + 200)
+      const { data: rows } = await supabase.from('planejamento_materiais')
+        .select('*,materiais(nome,codigo,unidade)').in('planejamento_id', batch)
+      if (rows) allMats = allMats.concat(rows)
+    }
+    const matsByPlan = {}
+    allMats.forEach(m => { if (!matsByPlan[m.planejamento_id]) matsByPlan[m.planejamento_id] = []; matsByPlan[m.planejamento_id].push(m) })
+
+    const esc = (v) => { const s = String(v ?? '').replace(/"/g, '""'); return `"${s}"` }
+    const headers = ['Código','Descrição','Procedimento','Equipamento','Cód.Equip','Área','Periodicidade','Data Programada','Responsável','Duração (min)','Materiais']
+    const rows = ativos.map(p => {
+      const eq = equipamentos.find(e => e.id === p.equipamento_id)
+      const ar = areas.find(a => a.id === p.area_id)
+      const mats = (matsByPlan[p.id] || []).map(m => `${m.materiais?.nome || m.descricao || '?'} (${m.quantidade}${m.materiais?.unidade ? ' ' + m.materiais.unidade : ''})`).join(' | ')
+      return [
+        p.codigo || '', p.descricao || '', (p.descricao_plano || '').replace(/\r?\n/g, ' '),
+        eq?.nome || '', eq?.codigo || '', ar?.nome || '',
+        p.periodicidade || '', p.data_programada ? p.data_programada.substring(0, 10) : '',
+        p.responsavel || '', p.duracao_estimada_min || 0, mats,
+      ].map(esc).join(';')
+    })
+    const csv = '﻿' + headers.map(esc).join(';') + '\n' + rows.join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = `plano_preventivo_manutelos_${new Date().toISOString().split('T')[0]}.csv`
+    a.click(); URL.revokeObjectURL(url)
+  }
+
+  const exportarHTML = async () => {
+    const ativos = data.filter(p => p.ativo !== false).sort((a, b) => (a.data_programada || '').localeCompare(b.data_programada || ''))
+    if (ativos.length === 0) { alert('Nenhum plano para exportar'); return }
+    const ids = ativos.map(p => p.id)
+    let allMats = []
+    for (let i = 0; i < ids.length; i += 200) {
+      const batch = ids.slice(i, i + 200)
+      const { data: rows } = await supabase.from('planejamento_materiais')
+        .select('*,materiais(nome,codigo,unidade)').in('planejamento_id', batch)
+      if (rows) allMats = allMats.concat(rows)
+    }
+    const matsByPlan = {}
+    allMats.forEach(m => { if (!matsByPlan[m.planejamento_id]) matsByPlan[m.planejamento_id] = []; matsByPlan[m.planejamento_id].push(m) })
+
+    const esc = (s) => String(s ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))
+    const linhas = ativos.map((p, i) => {
+      const eq = equipamentos.find(e => e.id === p.equipamento_id)
+      const ar = areas.find(a => a.id === p.area_id)
+      const mats = (matsByPlan[p.id] || []).map(m => `${m.materiais?.nome || m.descricao || '?'} (${m.quantidade}${m.materiais?.unidade ? ' ' + m.materiais.unidade : ''})`).join(', ')
+      return `<tr>
+        <td>${i + 1}</td>
+        <td><b>${esc(p.descricao || '')}</b>${p.descricao_plano ? `<br><small style="color:#666">${esc(p.descricao_plano)}</small>` : ''}</td>
+        <td>${esc(eq?.nome || '—')}<br><small>${esc(eq?.codigo || '')}</small></td>
+        <td>${esc(ar?.nome || '—')}</td>
+        <td>${esc(p.periodicidade || '—')}</td>
+        <td>${p.data_programada ? new Date(p.data_programada).toLocaleDateString('pt-BR') : '—'}</td>
+        <td>${esc(p.responsavel || '—')}</td>
+        <td>${p.duracao_estimada_min || 0} min</td>
+        <td><small>${esc(mats || '—')}</small></td>
+      </tr>`
+    }).join('')
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Plano Preventivo MANUTELOS</title>
+<style>
+body{font-family:Arial,sans-serif;color:#0F172A;margin:20px}
+h1{color:#1E40AF;letterspacing:2px;border-bottom:3px solid #1E40AF;padding-bottom:8px}
+.meta{color:#64748B;font-size:11px;margin-bottom:18px}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{background:#1E40AF;color:#fff;padding:8px 6px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:1px}
+td{padding:6px;border-bottom:1px solid #E2E8F0;vertical-align:top}
+tr:nth-child(even){background:#F8FAFC}
+small{font-size:10px;color:#64748B}
+@media print{body{margin:10mm}th{background:#1E40AF !important;-webkit-print-color-adjust:exact}}
+</style></head><body>
+<h1>PLANO PREVENTIVO DE MANUTENÇÃO — MANUTELOS</h1>
+<div class="meta">Fábrica de Algodão Telos · ${ativos.length} planos ativos · Emitido em ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}</div>
+<table>
+<thead><tr><th>#</th><th>Descrição / Procedimento</th><th>Equipamento</th><th>Área</th><th>Periodicidade</th><th>Programada</th><th>Responsável</th><th>Duração</th><th>Materiais</th></tr></thead>
+<tbody>${linhas}</tbody></table>
+<script>setTimeout(()=>window.print(),300)</script>
+</body></html>`
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank')
+  }
+
   if (loading) return <Loading />
 
   return <div>
-    <Header title="MANUTENÇÃO PREVENTIVA" action={novo} label="+ NOVO PLANO" mobile={vp.isMobile} />
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+      <h1 style={{ margin: 0, fontFamily: FONT_DISPLAY, fontSize: vp.isMobile ? 22 : 30, letterSpacing: 2, color: ACCENT }}>MANUTENÇÃO PREVENTIVA</h1>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <button style={{ ...S.btnS, color: '#22C55E', borderColor: '#22C55E' }} onClick={exportarCSV}>📊 CSV</button>
+        <button style={{ ...S.btnS, color: '#A855F7', borderColor: '#A855F7' }} onClick={exportarHTML}>🖨️ Imprimir</button>
+        <button style={S.btnP} onClick={novo}>+ NOVO PLANO</button>
+      </div>
+    </div>
 
     {/* Resumo */}
     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
