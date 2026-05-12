@@ -456,13 +456,46 @@ export function Preventiva() {
 
   const planByDate = useMemo(() => {
     const map = {}
+    // Janela: 6 meses atrás até 12 meses à frente do mês visível
+    const [vy, vm] = mesAtual.split('-').map(Number)
+    const inicio = new Date(vy, vm - 7, 1)
+    const fim = new Date(vy, vm + 12, 0)
+
+    const intervaloDias = {
+      'Diária': 1, 'Diaria': 1,
+      'Semanal': 7,
+      'Quinzenal': 14,
+      'Mensal': 30,
+      'Bimestral': 60,
+      'Trimestral': 90,
+      'Semestral': 180,
+      'Anual': 365,
+    }
+
     data.filter(p => p.data_programada && p.ativo !== false).forEach(p => {
-      const d = p.data_programada.substring(0, 10)
-      if (!map[d]) map[d] = []
-      map[d].push(p)
+      const baseDate = new Date(p.data_programada.substring(0, 10) + 'T00:00:00')
+      const step = intervaloDias[p.periodicidade] || 0
+      if (step === 0) {
+        // Sem periodicidade: só uma ocorrência
+        const d = p.data_programada.substring(0, 10)
+        if (!map[d]) map[d] = []
+        map[d].push(p)
+        return
+      }
+      // Gera ocorrências dentro da janela
+      // Recua até antes do início, depois avança
+      let cur = new Date(baseDate)
+      while (cur > inicio) cur.setDate(cur.getDate() - step)
+      while (cur < inicio) cur.setDate(cur.getDate() + step)
+      while (cur <= fim) {
+        const ds = cur.toISOString().split('T')[0]
+        if (!map[ds]) map[ds] = []
+        map[ds].push(p)
+        cur.setDate(cur.getDate() + step)
+      }
     })
     return map
-  }, [data])
+  }, [data, mesAtual])
 
   const prevMonth = () => { const [y, m] = mesAtual.split('-').map(Number); const d = new Date(y, m - 2, 1); setMesAtual(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`) }
   const nextMonth = () => { const [y, m] = mesAtual.split('-').map(Number); const d = new Date(y, m, 1); setMesAtual(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`) }
