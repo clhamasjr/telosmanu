@@ -562,17 +562,149 @@ small{font-size:10px;color:#64748B}
     window.open(url, '_blank')
   }
 
+  const [gerandoIA, setGerandoIA] = useState(false)
+  const [previewIA, setPreviewIA] = useState(null)
+
+  const analisarHistorico = async () => {
+    setGerandoIA(true)
+    // Buscar OS dos últimos 3 anos
+    const from = new Date(); from.setFullYear(from.getFullYear() - 3)
+    const fromStr = from.toISOString().split('T')[0]
+    let allOS = [], pg = 0
+    while (true) {
+      const { data: rows } = await supabase.from('ordens_servico')
+        .select('id,equipamento_id,data_abertura,tipo_falha_id,tipo_manutencao_id,equipamentos(id,codigo,nome,area_id),tipos_manutencao(nome),tipos_falha(nome)')
+        .gte('data_abertura', fromStr).range(pg * 1000, (pg + 1) * 1000 - 1)
+      if (!rows || rows.length === 0) break
+      allOS = allOS.concat(rows)
+      if (rows.length < 1000) break
+      pg++; if (pg > 30) break
+    }
+    // Agrupar por equipamento
+    const eqMap = {}
+    allOS.forEach(o => {
+      if (!o.equipamento_id || !o.equipamentos) return
+      const id = o.equipamento_id
+      if (!eqMap[id]) eqMap[id] = { eq: o.equipamentos, total: 0, corretivas: 0, datas: [], falhas: {} }
+      eqMap[id].total++
+      if (o.tipos_manutencao?.nome === 'Corretiva') eqMap[id].corretivas++
+      eqMap[id].datas.push(new Date(o.data_abertura))
+      const f = o.tipos_falha?.nome || 'Mecânica'
+      eqMap[id].falhas[f] = (eqMap[id].falhas[f] || 0) + 1
+    })
+    // Classificar
+    const candidatos = []
+    Object.entries(eqMap).forEach(([id, e]) => {
+      if (e.corretivas < 10) return
+      e.datas.sort((a, b) => a - b)
+      const dias = (e.datas[e.datas.length - 1] - e.datas[0]) / 86400000
+      const mtbf = dias / e.total
+      let periodicidade, offsetDias, duracao
+      if (mtbf < 3) { periodicidade = 'Semanal'; offsetDias = 7; duracao = 60 }
+      else if (mtbf < 7) { periodicidade = 'Quinzenal'; offsetDias = 14; duracao = 90 }
+      else if (mtbf < 15) { periodicidade = 'Mensal'; offsetDias = 30; duracao = 120 }
+      else { periodicidade = 'Trimestral'; offsetDias = 90; duracao = 180 }
+      const falhaTop = Object.entries(e.falhas).sort((a, b) => b[1] - a[1])[0][0]
+      candidatos.push({ eq_id: id, eq: e.eq, corretivas: e.corretivas, mtbf, periodicidade, offsetDias, duracao, falhaTop })
+    })
+    // Filtrar já existentes
+    const { data: existentes } = await supabase.from('planejamento_manutencao').select('equipamento_id,descricao').like('descricao', 'Inspeção Preventiva%')
+    const existeSet = new Set((existentes || []).map(p => p.equipamento_id))
+    const novos = candidatos.filter(c => !existeSet.has(c.eq_id))
+    setPreviewIA({ candidatos, novos, jaExistem: candidatos.length - novos.length })
+    setGerandoIA(false)
+  }
+
+  const procedimentos = {
+    'Mecânica': '1. Verificar ruídos anormais e vibração excessiva\n2. Inspecionar correias, polias e tensão\n3. Verificar rolamentos e mancais (lubrificação)\n4. Checar engrenagens (folga e desgaste)\n5. Inspecionar fixações e parafusos\n6. Verificar alinhamento de eixos\n7. Limpar e lubrificar componentes móveis\n8. Registrar leituras de temperatura',
+    'Elétrica': '1. Verificar painel elétrico (aquecimento, conexões)\n2. Inspecionar cabos e conexões (oxidação)\n3. Medir tensão e corrente nominal\n4. Testar disjuntores e contatores\n5. Verificar isolação dos motores\n6. Checar botoeiras, relés e sensores\n7. Inspecionar aterramento\n8. Limpar painéis e ventiladores',
+    'Hidráulica': '1. Verificar nível e qualidade do óleo hidráulico\n2. Inspecionar mangueiras (vazamentos, fissuras)\n3. Checar pressão de trabalho\n4. Verificar bomba (ruído, vibração)\n5. Inspecionar válvulas e cilindros\n6. Testar elementos filtrantes\n7. Verificar temperatura do fluido\n8. Apertar conexões hidráulicas',
+    'Pneumática': '1. Verificar pressão da linha de ar\n2. Inspecionar mangueiras e conexões\n3. Drenar reservatórios e filtros de ar\n4. Verificar lubrificador (nível e dosagem)\n5. Testar válvulas solenoides\n6. Inspecionar cilindros pneumáticos\n7. Verificar atuadores e regulagens\n8. Limpar filtros de admissão',
+    'Predial': '1. Inspeção geral da estrutura\n2. Verificar instalações elétricas prediais\n3. Checar hidráulica predial\n4. Inspecionar iluminação\n5. Verificar condições de pisos e paredes\n6. Limpeza de calhas e telhados\n7. Inspeção de portas e janelas\n8. Verificar sistema de segurança',
+  }
+
+  const confirmarGeracao = async () => {
+    if (!previewIA?.novos?.length) return
+    setGerandoIA(true)
+    const hoje = new Date().toISOString().split('T')[0]
+    const planos = previewIA.novos.map(c => {
+      const dp = new Date(); dp.setDate(dp.getDate() + c.offsetDias)
+      return {
+        descricao: `Inspeção Preventiva - ${c.eq.nome}`,
+        descricao_plano: procedimentos[c.falhaTop] || procedimentos['Mecânica'],
+        codigo: 'PI-' + (c.eq.codigo || c.eq_id.substring(0, 8)),
+        equipamento_id: c.eq_id,
+        area_id: c.eq.area_id || null,
+        periodicidade: c.periodicidade,
+        data_base: hoje,
+        data_programada: dp.toISOString().split('T')[0],
+        responsavel: 'Equipe Manutenção',
+        duracao_estimada_min: c.duracao,
+        ativo: true,
+      }
+    })
+    // Inserir em batches
+    for (let i = 0; i < planos.length; i += 100) {
+      await supabase.from('planejamento_manutencao').insert(planos.slice(i, i + 100))
+    }
+    setGerandoIA(false); setPreviewIA(null); refetch()
+    alert(`✅ ${planos.length} planos de inspeção criados!`)
+  }
+
   if (loading) return <Loading />
 
   return <div>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
       <h1 style={{ margin: 0, fontFamily: FONT_DISPLAY, fontSize: vp.isMobile ? 22 : 30, letterSpacing: 2, color: ACCENT }}>MANUTENÇÃO PREVENTIVA</h1>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <button style={{ ...S.btnS, color: '#F59E0B', borderColor: '#F59E0B', fontWeight: 700 }} onClick={analisarHistorico} disabled={gerandoIA}>🤖 {gerandoIA ? 'Analisando...' : 'Gerar Plano IA'}</button>
         <button style={{ ...S.btnS, color: '#22C55E', borderColor: '#22C55E' }} onClick={exportarCSV}>📊 CSV</button>
         <button style={{ ...S.btnS, color: '#A855F7', borderColor: '#A855F7' }} onClick={exportarHTML}>🖨️ Imprimir</button>
         <button style={S.btnP} onClick={novo}>+ NOVO PLANO</button>
       </div>
     </div>
+
+    {/* Modal preview Plano IA */}
+    {previewIA && <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={() => setPreviewIA(null)}>
+      <div style={{ background: '#FFF', borderRadius: 12, maxWidth: 700, width: '100%', maxHeight: '85vh', overflow: 'auto', padding: 20 }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <h2 style={{ margin: 0, color: '#F59E0B', fontSize: 18 }}>🤖 Plano de Inspeção Inteligente</h2>
+          <span style={{ cursor: 'pointer', fontSize: 20, color: '#94A3B8' }} onClick={() => setPreviewIA(null)}>✕</span>
+        </div>
+        <div style={{ background: '#FFFBEB', border: '1px solid #FCD34D', borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 12, color: '#92400E' }}>
+          Análise baseada em <b>3 anos de histórico de OS</b>. Equipamentos com 10+ corretivas foram classificados pelo MTBF (tempo médio entre falhas).
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 120, background: '#F1F5F9', borderRadius: 8, padding: 10, textAlign: 'center' }}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: '#22C55E' }}>{previewIA.novos.length}</div>
+            <div style={{ fontSize: 10, color: '#64748B' }}>Novos planos</div>
+          </div>
+          <div style={{ flex: 1, minWidth: 120, background: '#F1F5F9', borderRadius: 8, padding: 10, textAlign: 'center' }}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: '#94A3B8' }}>{previewIA.jaExistem}</div>
+            <div style={{ fontSize: 10, color: '#64748B' }}>Já existem</div>
+          </div>
+        </div>
+        {['Semanal', 'Quinzenal', 'Mensal', 'Trimestral'].map(per => {
+          const itens = previewIA.novos.filter(c => c.periodicidade === per)
+          if (itens.length === 0) return null
+          const cor = { Semanal: '#EF4444', Quinzenal: '#F59E0B', Mensal: '#3B82F6', Trimestral: '#22C55E' }[per]
+          return <div key={per} style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: cor, textTransform: 'uppercase', marginBottom: 4 }}>{per} ({itens.length})</div>
+            {itens.slice(0, 8).map(c => <div key={c.eq_id} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #F1F5F9', fontSize: 11 }}>
+              <span style={{ color: '#0F172A' }}>{c.eq.codigo} - {c.eq.nome}</span>
+              <span style={{ color: '#64748B' }}>{c.corretivas} OS · MTBF {c.mtbf.toFixed(1)}d · {c.falhaTop}</span>
+            </div>)}
+            {itens.length > 8 && <div style={{ fontSize: 10, color: '#94A3B8', paddingTop: 4 }}>+ {itens.length - 8} mais...</div>}
+          </div>
+        })}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 14, borderTop: '1px solid #E2E8F0', marginTop: 14 }}>
+          <button style={S.btnS} onClick={() => setPreviewIA(null)}>Cancelar</button>
+          <button style={{ ...S.btnP, opacity: previewIA.novos.length > 0 && !gerandoIA ? 1 : .4 }} disabled={gerandoIA || previewIA.novos.length === 0} onClick={confirmarGeracao}>
+            {gerandoIA ? 'Criando...' : `✅ Criar ${previewIA.novos.length} Planos`}
+          </button>
+        </div>
+      </div>
+    </div>}
 
     {/* Resumo */}
     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
