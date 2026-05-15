@@ -109,13 +109,19 @@ export default function OrdensServico({ initialStatusFilter, onClearFilter }) {
     const tipo=tiposMan.find(t=>t.id===d.tipo_manutencao_id)
     const area=areas.find(a=>a.id===d.area_id)
     d.titulo=eq?`${eq.codigo||''} - ${eq.nome}`:`${tipo?.nome||'OS'} - ${area?.nome||''}`
+    let novaOSCriada = null
     if(modal==='nova'){
-      await supabase.from('ordens_servico').insert(d)
+      const {data:created} = await supabase.from('ordens_servico').insert(d).select('*,equipamentos(id,nome,codigo,area_id),areas(id,nome),status_os(id,nome,cor,cor_bg,icone),tipos_manutencao(id,nome),tipos_falha(id,nome)').single()
+      novaOSCriada = created
     } else {
       const id=d.id; delete d.id; delete d.created_at; delete d.updated_at
       await supabase.from('ordens_servico').update(d).eq('id',id)
     }
     setSaving(false); setModal(null); refetch()
+    if (novaOSCriada && window.confirm(`OS ${novaOSCriada.numero_ordem || ''} criada com sucesso!\n\nDeseja imprimir agora?`)) {
+      setOs(novaOSCriada); setModal('ver')
+      setTimeout(() => { document.querySelector('[data-print-os]')?.click() }, 400)
+    }
   }
 
   const canEdit = getPermissao(perfil,'os_editar')
@@ -421,6 +427,87 @@ function OSDetail({os,onEdit,onAtender,onAprovar,mobile,perfil,mecanicos:allMec}
     supabase.from('os_materiais').select('*,materiais(nome,codigo,unidade)').eq('ordem_servico_id',os.id).then(({data})=>setMats(data||[]))
     supabase.from('os_mecanicos').select('*,mecanicos(nome)').eq('ordem_servico_id',os.id).then(({data})=>setOsMecs(data||[]))
   },[os.id])
+
+  const imprimir = () => {
+    const esc = (s) => String(s ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))
+    const dt = (s) => s ? new Date(s).toLocaleString('pt-BR') : ''
+    const causaFalha = os.tipos_falha?.nome || ''
+    const causas = ['Elétrica','Automação','Mecânica','Hidráulica','Pneumática','Predial','Limpeza']
+    const chk = (v) => causaFalha === v ? '☒' : '☐'
+    const matsHTML = mats.map(m => `<tr><td>${esc(m.materiais?.nome || m.descricao || '')}</td><td>${esc(m.materiais?.unidade||'')}</td><td>${esc(m.quantidade)}</td></tr>`).join('')
+    const mecsHTML = osMecs.map(m => esc(m.mecanicos?.nome || '')).join(', ')
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>OS ${os.numero_ordem||''}</title>
+<style>
+@page{size:A5;margin:8mm}
+body{font-family:Arial,sans-serif;font-size:11px;color:#000;margin:0;padding:6px}
+.head{display:flex;border:2px solid #000}
+.brand{background:#000;color:#fff;font-weight:900;font-size:22px;padding:6px 12px;letter-spacing:3px;font-style:italic}
+.title{flex:1;text-align:center;font-weight:700;font-size:14px;padding:8px;letter-spacing:1px}
+.osnum{font-weight:900;color:#C00;font-size:18px;padding:8px 14px;border-left:2px solid #000}
+table{width:100%;border-collapse:collapse;margin-top:0}
+table.grid td{border:1px solid #000;padding:3px 5px;vertical-align:top}
+.lbl{font-size:8px;font-weight:700;color:#000;text-transform:uppercase}
+.val{font-size:11px;min-height:14px;font-weight:600}
+.sec-title{background:#000;color:#fff;font-weight:700;text-align:center;padding:3px;font-size:10px;letter-spacing:1px;margin-top:3px}
+.area{border:1px solid #000;padding:5px;min-height:42px;font-size:11px;white-space:pre-wrap}
+.chks{border:1px solid #000;padding:5px;display:flex;justify-content:space-around;font-size:10px;flex-wrap:wrap;gap:4px}
+.chks .it{display:inline-flex;align-items:center;gap:3px}
+.pend{border:1px solid #000;padding:5px;font-size:10px}
+.foot{border:1px solid #000;padding:4px;font-size:9px;display:flex;justify-content:space-between;margin-top:4px}
+.sigrow{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid #000;margin-top:3px}
+.sigrow > div{border-right:1px solid #000;padding:3px 5px;min-height:32px}
+.sigrow > div:last-child{border-right:none}
+.mat-tbl{margin-top:4px;border:1px solid #000;width:100%;font-size:10px}
+.mat-tbl th{background:#eee;border:1px solid #000;padding:2px}
+.mat-tbl td{border:1px solid #000;padding:2px}
+@media print{body{padding:0}}
+</style></head><body>
+<div class="head">
+  <div class="brand">TÉLOS</div>
+  <div class="title">ORDEM DE SERVIÇO</div>
+  <div class="osnum">${esc(os.numero_ordem||'—')}</div>
+</div>
+<table class="grid"><tr>
+  <td style="width:25%"><div class="lbl">Setor</div><div class="val">${esc(os.areas?.nome||'')}</div></td>
+  <td style="width:35%"><div class="lbl">Máquina</div><div class="val">${esc((os.equipamentos?.codigo?os.equipamentos.codigo+' - ':'')+(os.equipamentos?.nome||''))}</div></td>
+  <td style="width:20%"><div class="lbl">Data / Hora</div><div class="val">${esc(dt(os.data_abertura))}</div></td>
+  <td style="width:20%"><div class="lbl">Recebido por</div><div class="val">${esc(os.recebido_por||'')}</div><div class="lbl" style="margin-top:2px">Data/Hora</div><div class="val">${esc(dt(os.data_recebimento))}</div></td>
+</tr></table>
+<div class="lbl" style="margin-top:4px">Descrição do Problema:</div>
+<div class="area">${esc(os.descricao||'')}</div>
+<div class="sec-title">CAUSA DA FALHA</div>
+<div class="chks">${causas.map(c=>`<span class="it">${chk(c)} ${c}</span>`).join('')}</div>
+<div class="lbl" style="margin-top:4px">Descrição do Serviço Executado:</div>
+<div class="area" style="min-height:80px">${esc(os.descricao_execucao||'')}</div>
+<div class="pend">
+  <b>Medidas a realizar / Pendências?</b>
+  ${os.tem_pendencia ? '☒ SIM ☐ NÃO' : '☐ SIM ☒ NÃO'}
+  &nbsp;&nbsp;
+  ${os.pendencia_melhoria?'☒':'☐'} ME - Melhoria &nbsp;
+  ${os.pendencia_terceiros?'☒':'☐'} Por Conta de Terceiros &nbsp;
+  ${os.pendencia_aguard_material?'☒':'☐'} Aguardando Material
+</div>
+<div class="lbl" style="margin-top:4px">Observações:</div>
+<div class="area" style="min-height:34px">${esc(os.observacoes||'')}</div>
+${mecsHTML?`<div class="foot"><b>Mecânicos:</b> ${mecsHTML}</div>`:''}
+${matsHTML?`<table class="mat-tbl"><thead><tr><th>Material</th><th>Un.</th><th>Qtd</th></tr></thead><tbody>${matsHTML}</tbody></table>`:''}
+<div class="sigrow">
+  <div><div class="lbl">Requisitante</div><div class="val">${esc(os.solicitante||'')}</div></div>
+  <div><div class="lbl">Executado por</div><div class="val">${esc(os.executado_por||'')}</div></div>
+  <div><div class="lbl">Resp. Manut.</div><div class="val">${esc(os.resp_manutencao||'')}</div></div>
+  <div><div class="lbl">Liberado por</div><div class="val">${esc(os.liberado_por||'')}</div></div>
+</div>
+<div class="sigrow" style="grid-template-columns:1fr 1fr 1fr">
+  <div><div class="lbl">Serviço Data</div><div class="val">${esc(os.data_abertura?new Date(os.data_abertura).toLocaleDateString('pt-BR'):'')}</div></div>
+  <div><div class="lbl">Início</div><div class="val">${esc(dt(os.data_inicio))}</div></div>
+  <div><div class="lbl">Término</div><div class="val">${esc(dt(os.data_conclusao))}</div></div>
+</div>
+<div style="text-align:right;font-size:8px;color:#666;margin-top:4px">FORM.MN-023 · MANUTELOS · Emitido em ${new Date().toLocaleString('pt-BR')}</div>
+<script>setTimeout(()=>window.print(),250)</script>
+</body></html>`
+    const w = window.open('', '_blank')
+    w.document.write(html); w.document.close()
+  }
   const isAprov=os.status_os?.nome==='Aguardando Aprovação'
   const canApr=isAprov&&(perfil==='admin'||perfil==='gestor'||perfil==='supervisor'||perfil==='solicitante')
   const canAtend=getPermissao(perfil,'os_atender')&&os.status_os?.nome!=='Concluída'&&os.status_os?.nome!=='Aguardando Aprovação'
@@ -478,7 +565,8 @@ function OSDetail({os,onEdit,onAtender,onAprovar,mobile,perfil,mecanicos:allMec}
         <button style={{...S.btnP,background:'#EF4444',padding:'10px 20px'}} onClick={onAprovar}>↩️ Devolver</button>
       </div>
     </div>}
-    <div style={{display:'flex',justifyContent:'flex-end',paddingTop:14,marginTop:12,borderTop:'1px solid #E2E8F0',gap:8}}>
+    <div style={{display:'flex',justifyContent:'flex-end',paddingTop:14,marginTop:12,borderTop:'1px solid #E2E8F0',gap:8,flexWrap:'wrap'}}>
+      <button data-print-os style={{...S.btnS,color:'#A855F7',borderColor:'#A855F7'}} onClick={imprimir}>🖨️ Imprimir</button>
       {canAtend&&<button style={{...S.btnP,background:'#3B82F6'}} onClick={onAtender}>🔧 Atender</button>}
       {getPermissao(perfil,'os_editar')&&<button style={S.btnP} onClick={onEdit}>✏️ Editar</button>}
     </div>
