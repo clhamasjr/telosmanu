@@ -441,9 +441,10 @@ function OSDetail({os,onEdit,onAtender,onAprovar,mobile,perfil,mecanicos:allMec}
 @page{size:A5;margin:8mm}
 body{font-family:Arial,sans-serif;font-size:11px;color:#000;margin:0;padding:6px}
 .head{display:flex;border:2px solid #000}
-.brand{background:#000;color:#fff;font-weight:900;font-size:22px;padding:6px 12px;letter-spacing:3px;font-style:italic}
+.brand{background:#1E40AF;color:#fff;font-weight:900;font-size:18px;padding:8px 14px;letter-spacing:3px;line-height:1.1}
+.brand .sub{font-size:7px;font-weight:400;letter-spacing:2px;opacity:.85;display:block;margin-top:2px}
 .title{flex:1;text-align:center;font-weight:700;font-size:14px;padding:8px;letter-spacing:1px}
-.osnum{font-weight:900;color:#C00;font-size:18px;padding:8px 14px;border-left:2px solid #000}
+.osnum{font-weight:900;color:#C00;font-size:20px;padding:8px 14px;border-left:2px solid #000;background:#FEF2F2}
 table{width:100%;border-collapse:collapse;margin-top:0}
 table.grid td{border:1px solid #000;padding:3px 5px;vertical-align:top}
 .lbl{font-size:8px;font-weight:700;color:#000;text-transform:uppercase}
@@ -463,8 +464,8 @@ table.grid td{border:1px solid #000;padding:3px 5px;vertical-align:top}
 @media print{body{padding:0}}
 </style></head><body>
 <div class="head">
-  <div class="brand">TÉLOS</div>
-  <div class="title">ORDEM DE SERVIÇO</div>
+  <div class="brand">MANUTELOS<span class="sub">GESTÃO DE MANUTENÇÃO</span></div>
+  <div class="title">ORDEM DE SERVIÇO<div style="font-size:8px;font-weight:400;color:#666;letter-spacing:0;margin-top:2px">Fábrica de Algodão Telos</div></div>
   <div class="osnum">${esc(os.numero_ordem||'—')}</div>
 </div>
 <table class="grid"><tr>

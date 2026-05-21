@@ -684,12 +684,50 @@ small{font-size:10px;color:#64748B}
     alert(`✅ ${planos.length} planos de inspeção criados!`)
   }
 
+  const [gerandoOS, setGerandoOS] = useState(false)
+  const gerarOSDosVencidos = async () => {
+    const vencs = data.filter(p => p.ativo !== false && p.data_programada && new Date(p.data_programada) < new Date())
+    if (vencs.length === 0) { alert('Não há planos vencidos.'); return }
+    if (!window.confirm(`Gerar ${vencs.length} OS preventivas a partir dos planos vencidos?`)) return
+    setGerandoOS(true)
+    const stAberta = (await supabase.from('status_os').select('id').eq('nome', 'Aberta').single()).data
+    const tipoPrev = (await supabase.from('tipos_manutencao').select('id').eq('nome', 'Preventiva').single()).data
+    let criadas = 0
+    const intervaloDias = { 'Diária': 1, 'Diaria': 1, 'Semanal': 7, 'Quinzenal': 14, 'Mensal': 30, 'Bimestral': 60, 'Trimestral': 90, 'Semestral': 180, 'Anual': 365 }
+    for (const p of vencs) {
+      const eq = equipamentos.find(e => e.id === p.equipamento_id)
+      const { error } = await supabase.from('ordens_servico').insert({
+        titulo: p.descricao,
+        descricao: p.descricao_plano || p.descricao,
+        equipamento_id: p.equipamento_id || null,
+        area_id: p.area_id || eq?.area_id || null,
+        status_id: stAberta?.id,
+        tipo_manutencao_id: tipoPrev?.id,
+        prioridade: 'Media',
+        solicitante: 'Plano Preventivo',
+        data_abertura: new Date().toISOString(),
+      })
+      if (!error) {
+        criadas++
+        // Avançar próxima data programada
+        const step = intervaloDias[p.periodicidade]
+        if (step) {
+          const next = new Date(p.data_programada); next.setDate(next.getDate() + step)
+          await supabase.from('planejamento_manutencao').update({ data_programada: next.toISOString().split('T')[0] }).eq('id', p.id)
+        }
+      }
+    }
+    setGerandoOS(false); refetch()
+    alert(`✅ ${criadas} OS preventivas criadas! Os planos foram reprogramados para a próxima ocorrência.`)
+  }
+
   if (loading) return <Loading />
 
   return <div>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
       <h1 style={{ margin: 0, fontFamily: FONT_DISPLAY, fontSize: vp.isMobile ? 22 : 30, letterSpacing: 2, color: ACCENT }}>MANUTENÇÃO PREVENTIVA</h1>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <button style={{ ...S.btnS, color: '#EF4444', borderColor: '#EF4444', fontWeight: 700 }} onClick={gerarOSDosVencidos} disabled={gerandoOS}>⚠️ {gerandoOS ? 'Gerando...' : `Gerar OS Vencidas (${vencidos.length})`}</button>
         <button style={{ ...S.btnS, color: '#F59E0B', borderColor: '#F59E0B', fontWeight: 700 }} onClick={analisarHistorico} disabled={gerandoIA}>🤖 {gerandoIA ? 'Analisando...' : 'Gerar Plano IA'}</button>
         <button style={{ ...S.btnS, color: '#22C55E', borderColor: '#22C55E' }} onClick={exportarCSV}>📊 CSV</button>
         <button style={{ ...S.btnS, color: '#A855F7', borderColor: '#A855F7' }} onClick={exportarHTML}>🖨️ Imprimir</button>
