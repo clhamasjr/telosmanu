@@ -125,17 +125,49 @@ export default function OrdensServico({ initialStatusFilter, onClearFilter, qrEq
     const d={...os}
     ;['areas','equipamentos','mecanicos','status_os','tipos_manutencao','tipos_falha'].forEach(k=>delete d[k])
     Object.keys(d).forEach(k=>{if(d[k]==='')d[k]=null})
+    // Converter numero_ordem para integer
+    if (d.numero_ordem !== null && d.numero_ordem !== undefined) {
+      const n = parseInt(d.numero_ordem)
+      d.numero_ordem = isNaN(n) ? null : n
+    }
     const eq=equipamentos.find(e=>e.id===d.equipamento_id)
     const tipo=tiposMan.find(t=>t.id===d.tipo_manutencao_id)
     const area=areas.find(a=>a.id===d.area_id)
     d.titulo=eq?`${eq.codigo||''} - ${eq.nome}`:`${tipo?.nome||'OS'} - ${area?.nome||''}`
+
+    // Auto-gerar numero_ordem se não preenchido (apenas em nova OS)
+    if (modal==='nova' && !d.numero_ordem) {
+      try {
+        const { data: prox } = await supabase.rpc('proximo_numero_os')
+        if (prox) d.numero_ordem = prox
+      } catch (e) { /* deixa sem número se falhar */ }
+    }
+
     let novaOSCriada = null
     if(modal==='nova'){
-      const {data:created} = await supabase.from('ordens_servico').insert(d).select('*,equipamentos(id,nome,codigo,area_id),areas(id,nome),status_os(id,nome,cor,cor_bg,icone),tipos_manutencao(id,nome),tipos_falha(id,nome)').single()
+      const {data:created, error} = await supabase.from('ordens_servico').insert(d).select('*,equipamentos(id,nome,codigo,area_id),areas(id,nome),status_os(id,nome,cor,cor_bg,icone),tipos_manutencao(id,nome),tipos_falha(id,nome)').single()
+      if (error) {
+        setSaving(false)
+        if (error.code === '23505' || (error.message||'').includes('duplicate') || (error.message||'').includes('unique')) {
+          alert(`❌ Já existe uma OS com o número ${d.numero_ordem}. Use outro número ou deixe em branco para gerar automaticamente.`)
+        } else {
+          alert(`Erro ao salvar: ${error.message}`)
+        }
+        return
+      }
       novaOSCriada = created
     } else {
       const id=d.id; delete d.id; delete d.created_at; delete d.updated_at
-      await supabase.from('ordens_servico').update(d).eq('id',id)
+      const { error } = await supabase.from('ordens_servico').update(d).eq('id',id)
+      if (error) {
+        setSaving(false)
+        if (error.code === '23505' || (error.message||'').includes('duplicate') || (error.message||'').includes('unique')) {
+          alert(`❌ Já existe uma OS com o número ${d.numero_ordem}. Use outro número.`)
+        } else {
+          alert(`Erro ao salvar: ${error.message}`)
+        }
+        return
+      }
     }
     setSaving(false); setModal(null); refetch()
     if (novaOSCriada && window.confirm(`OS ${novaOSCriada.numero_ordem || ''} criada com sucesso!\n\nDeseja imprimir agora?`)) {
@@ -259,8 +291,8 @@ function OSForm({os,setOs,onSave,onCancel,onDel,areas,equipamentos,mecanicos,sta
       <div style={{display:'flex',gap:14,marginBottom:10,alignItems:'center'}}>
         <div>
           <div style={{fontSize:9,color:'#94A3B8',textTransform:'uppercase'}}>Nº da OS</div>
-          <input style={{...S.input,width:100,fontSize:18,fontWeight:800,color:ACCENT,letterSpacing:2,textAlign:'center',marginBottom:0}}
-            value={os.numero_ordem||''} onChange={e=>u('numero_ordem',e.target.value)} placeholder="AUTO"/>
+          <input style={{...S.input,width:110,fontSize:18,fontWeight:800,color:ACCENT,letterSpacing:2,textAlign:'center',marginBottom:0}}
+            value={os.numero_ordem||''} onChange={e=>u('numero_ordem',e.target.value.replace(/\D/g,''))} placeholder="AUTO" title="Deixe em branco para gerar automaticamente"/>
         </div>
         <div style={{flex:1}}>
           <div style={{fontSize:9,color:'#94A3B8',textTransform:'uppercase'}}>Equipamento {isLocked&&'🔒'}</div>
@@ -328,6 +360,7 @@ function OSForm({os,setOs,onSave,onCancel,onDel,areas,equipamentos,mecanicos,sta
     </>}
 
     {/* Materials section in edit mode */}
+    {isEdit&&os.id&&<OSMecanicos osId={os.id} mecanicos={mecanicos}/>}
     {isEdit&&os.id&&<OSMateriais osId={os.id}/>}
 
     {missing.length>0&&<div style={{background:'#FFFBEB',border:'1px solid #F59E0B',borderRadius:6,padding:'6px 10px',fontSize:11,color:'#F59E0B',marginTop:8}}>Obrigatórios: {missing.join(', ')}</div>}
@@ -365,25 +398,97 @@ function OSMateriais({osId}) {
   </div>
 }
 
-// ── Mecânicos múltiplos na OS ──
+// ── Mecânicos múltiplos na OS (com horário e tempo por mecânico) ──
 function OSMecanicos({osId, mecanicos}) {
-  const [linked,setLinked]=useState([])
-  const [mecSel,setMecSel]=useState('')
-  useEffect(()=>{
-    supabase.from('os_mecanicos').select('*,mecanicos(id,nome)').eq('ordem_servico_id',osId).then(({data})=>setLinked(data||[]))
-  },[osId])
-  const add=async()=>{if(!mecSel)return;const{data:row}=await supabase.from('os_mecanicos').insert({ordem_servico_id:osId,mecanico_id:mecSel,data_inicio:new Date().toISOString()}).select('*,mecanicos(id,nome)').single();if(row)setLinked(p=>[...p,row]);setMecSel('')}
-  const rem=async(m)=>{await supabase.from('os_mecanicos').delete().eq('id',m.id);setLinked(p=>p.filter(x=>x.id!==m.id))}
-  return<div style={{marginBottom:14}}>
-    <div style={{fontSize:10,color:'#64748B',textTransform:'uppercase',fontWeight:600,marginBottom:6}}>👨‍🔧 Mecânicos ({linked.length})</div>
-    {linked.map(m=><div key={m.id} style={{display:'flex',justifyContent:'space-between',padding:'4px 0',borderBottom:'1px solid #222',fontSize:12}}>
-      <span style={{color:'#0F172A',fontWeight:600}}>🔧 {m.mecanicos?.nome}</span>
-      <span style={{cursor:'pointer',color:'#EF4444',fontSize:11}} onClick={()=>rem(m)}>✕</span>
-    </div>)}
-    <div style={{display:'flex',gap:6,marginTop:6}}>
-      <select style={{...S.select,flex:1,fontSize:11}} value={mecSel} onChange={e=>setMecSel(e.target.value)}><option value="">Adicionar mecânico...</option>{mecanicos.filter(m=>!linked.some(l=>l.mecanico_id===m.id)).map(m=><option key={m.id} value={m.id}>{m.nome}</option>)}</select>
-      <button style={{...S.btnP,padding:'6px 12px',fontSize:10}} onClick={add}>+</button>
+  const [linked, setLinked] = useState([])
+  const [mecSel, setMecSel] = useState('')
+  const [showAdd, setShowAdd] = useState(false)
+
+  const reload = () => supabase.from('os_mecanicos').select('*,mecanicos(id,nome)').eq('ordem_servico_id', osId).order('data_inicio', { ascending: true }).then(({ data }) => setLinked(data || []))
+  useEffect(() => { reload() }, [osId])
+
+  const add = async () => {
+    if (!mecSel) return
+    const agora = new Date().toISOString()
+    const { data: row } = await supabase.from('os_mecanicos').insert({
+      ordem_servico_id: osId, mecanico_id: mecSel, data_inicio: agora, data_fim: null,
+    }).select('*,mecanicos(id,nome)').single()
+    if (row) setLinked(p => [...p, row])
+    setMecSel(''); setShowAdd(false)
+  }
+
+  const finalizar = async (m) => {
+    const { data: row } = await supabase.from('os_mecanicos').update({ data_fim: new Date().toISOString() }).eq('id', m.id).select('*,mecanicos(id,nome)').single()
+    if (row) setLinked(p => p.map(x => x.id === m.id ? row : x))
+  }
+
+  const editar = async (m, campo, valor) => {
+    const upd = { [campo]: valor || null }
+    const { data: row } = await supabase.from('os_mecanicos').update(upd).eq('id', m.id).select('*,mecanicos(id,nome)').single()
+    if (row) setLinked(p => p.map(x => x.id === m.id ? row : x))
+  }
+
+  const rem = async (m) => {
+    if (!window.confirm(`Remover ${m.mecanicos?.nome} desta OS?`)) return
+    await supabase.from('os_mecanicos').delete().eq('id', m.id)
+    setLinked(p => p.filter(x => x.id !== m.id))
+  }
+
+  const fmtDtLocal = (s) => s ? s.substring(0, 16) : ''
+  const fmtMin = (m) => {
+    if (!m || m < 0) return '—'
+    const h = Math.floor(m / 60), min = m % 60
+    return h > 0 ? `${h}h${min ? ' ' + min + 'min' : ''}` : `${min}min`
+  }
+  const totalMin = linked.reduce((s, m) => s + (m.tempo_minutos || 0), 0)
+  const disponiveis = mecanicos.filter(m => !linked.some(l => l.mecanico_id === m.id))
+
+  return <div style={{ marginBottom: 14, background: '#F8FAFC', borderRadius: 8, padding: 12, border: '1px solid #E2E8F0' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 6 }}>
+      <div style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>
+        👨‍🔧 Mecânicos ({linked.length}) {totalMin > 0 && <span style={{ color: ACCENT, marginLeft: 6 }}>· Total: {fmtMin(totalMin)}</span>}
+      </div>
+      {!showAdd && disponiveis.length > 0 && <button style={{ ...S.btnP, padding: '4px 12px', fontSize: 11, minHeight: 28 }} onClick={() => setShowAdd(true)}>+ Adicionar Mecânico</button>}
     </div>
+
+    {linked.length === 0 && <div style={{ fontSize: 11, color: '#94A3B8', textAlign: 'center', padding: 10 }}>Nenhum mecânico atribuído</div>}
+
+    {linked.map((m, i) => {
+      const ativo = !m.data_fim
+      return <div key={m.id} style={{ background: '#FFF', borderRadius: 6, padding: 10, marginBottom: 8, border: `1px solid ${ativo ? '#22C55E' : '#E2E8F0'}`, borderLeft: `3px solid ${ativo ? '#22C55E' : ACCENT}` }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#0F172A' }}>
+            🔧 {m.mecanicos?.nome || '?'}
+            {ativo && <span style={{ marginLeft: 8, fontSize: 9, background: '#DCFCE7', color: '#15803D', padding: '2px 8px', borderRadius: 10, fontWeight: 700 }}>ATENDENDO</span>}
+          </div>
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            {m.tempo_minutos > 0 && <span style={{ fontSize: 11, color: ACCENT, fontWeight: 700, background: '#EFF6FF', padding: '2px 8px', borderRadius: 4 }}>⏱ {fmtMin(m.tempo_minutos)}</span>}
+            {ativo && <button style={{ ...S.btnS, padding: '3px 10px', fontSize: 10, minHeight: 24, color: '#22C55E', borderColor: '#22C55E' }} onClick={() => finalizar(m)}>✓ Finalizar</button>}
+            <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', fontSize: 14, padding: 2 }} onClick={() => rem(m)}>✕</button>
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          <div>
+            <div style={{ fontSize: 9, color: '#94A3B8', marginBottom: 2, fontWeight: 600 }}>INÍCIO</div>
+            <input type="datetime-local" style={{ ...S.input, fontSize: 11, padding: '6px 8px', marginBottom: 0 }} value={fmtDtLocal(m.data_inicio)} onChange={e => editar(m, 'data_inicio', e.target.value ? e.target.value + ':00' : null)} />
+          </div>
+          <div>
+            <div style={{ fontSize: 9, color: '#94A3B8', marginBottom: 2, fontWeight: 600 }}>TÉRMINO</div>
+            <input type="datetime-local" style={{ ...S.input, fontSize: 11, padding: '6px 8px', marginBottom: 0 }} value={fmtDtLocal(m.data_fim)} onChange={e => editar(m, 'data_fim', e.target.value ? e.target.value + ':00' : null)} />
+          </div>
+        </div>
+        {m.observacoes !== null && m.observacoes !== undefined && <input style={{ ...S.input, fontSize: 11, padding: '6px 8px', marginBottom: 0, marginTop: 6 }} placeholder="Observações..." value={m.observacoes || ''} onChange={e => editar(m, 'observacoes', e.target.value)} />}
+      </div>
+    })}
+
+    {showAdd && <div style={{ display: 'flex', gap: 6, marginTop: 8, padding: 8, background: '#FEF3C7', borderRadius: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+      <select style={{ ...S.select, flex: 1, fontSize: 11, minWidth: 160 }} value={mecSel} onChange={e => setMecSel(e.target.value)}>
+        <option value="">Selecione o mecânico...</option>
+        {disponiveis.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
+      </select>
+      <button style={{ ...S.btnP, padding: '6px 14px', fontSize: 11, minHeight: 32 }} onClick={add} disabled={!mecSel}>▶ Iniciar Atendimento</button>
+      <button style={{ ...S.btnS, padding: '6px 10px', fontSize: 11, minHeight: 32 }} onClick={() => { setShowAdd(false); setMecSel('') }}>Cancelar</button>
+    </div>}
   </div>
 }
 
@@ -490,6 +595,8 @@ function OSDetail({os,onEdit,onAtender,onAprovar,mobile,perfil,mecanicos:allMec}
     const causas = ['Elétrica','Automação','Mecânica','Hidráulica','Pneumática','Predial','Limpeza']
     const chk = (v) => causaFalha === v ? '☒' : '☐'
     const matsHTML = mats.map(m => `<tr><td>${esc(m.materiais?.nome || m.descricao || '')}</td><td>${esc(m.materiais?.unidade||'')}</td><td>${esc(m.quantidade)}</td></tr>`).join('')
+    const fmtMinPrint = (min) => { if (!min || min <= 0) return '—'; const h = Math.floor(min/60), mm = min%60; return h>0 ? `${h}h${mm?' '+mm+'min':''}` : `${mm}min` }
+    const mecsTblHTML = osMecs.length > 0 ? `<table class="mec-tbl"><thead><tr><th>Mecânico</th><th>Início</th><th>Término</th><th>Tempo</th></tr></thead><tbody>${osMecs.map(m => `<tr><td>${esc(m.mecanicos?.nome||'')}</td><td>${esc(m.data_inicio?dt(m.data_inicio):'')}</td><td>${esc(m.data_fim?dt(m.data_fim):'em and.')}</td><td><b>${fmtMinPrint(m.tempo_minutos)}</b></td></tr>`).join('')}</tbody></table>` : ''
     const mecsHTML = osMecs.map(m => esc(m.mecanicos?.nome || '')).join(', ')
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>OS ${os.numero_ordem||''}</title>
 <style>
@@ -513,9 +620,9 @@ table.grid td{border:1px solid #000;padding:3px 5px;vertical-align:top}
 .sigrow{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid #000;margin-top:3px}
 .sigrow > div{border-right:1px solid #000;padding:3px 5px;min-height:32px}
 .sigrow > div:last-child{border-right:none}
-.mat-tbl{margin-top:4px;border:1px solid #000;width:100%;font-size:10px}
-.mat-tbl th{background:#eee;border:1px solid #000;padding:2px}
-.mat-tbl td{border:1px solid #000;padding:2px}
+.mat-tbl,.mec-tbl{margin-top:4px;border:1px solid #000;width:100%;font-size:10px;border-collapse:collapse}
+.mat-tbl th,.mec-tbl th{background:#eee;border:1px solid #000;padding:2px}
+.mat-tbl td,.mec-tbl td{border:1px solid #000;padding:2px}
 @media print{body{padding:0}}
 </style></head><body>
 <div class="head">
@@ -545,7 +652,7 @@ table.grid td{border:1px solid #000;padding:3px 5px;vertical-align:top}
 </div>
 <div class="lbl" style="margin-top:4px">Observações:</div>
 <div class="area" style="min-height:34px">${esc(os.observacoes||'')}</div>
-${mecsHTML?`<div class="foot"><b>Mecânicos:</b> ${mecsHTML}</div>`:''}
+${mecsTblHTML}
 ${matsHTML?`<table class="mat-tbl"><thead><tr><th>Material</th><th>Un.</th><th>Qtd</th></tr></thead><tbody>${matsHTML}</tbody></table>`:''}
 <div class="sigrow">
   <div><div class="lbl">Requisitante</div><div class="val">${esc(os.solicitante||'')}</div></div>
@@ -589,9 +696,20 @@ ${matsHTML?`<table class="mat-tbl"><thead><tr><th>Material</th><th>Un.</th><th>Q
     {os.executado_por&&<R l="Executado por" v={os.executado_por}/>}
     {os.resp_manutencao&&<R l="Resp. Manutenção" v={os.resp_manutencao}/>}
     {os.liberado_por&&<R l="Liberado por" v={os.liberado_por}/>}
-    {osMecs.length>0&&<div style={{padding:'5px 0',borderBottom:'1px solid #F1F5F9'}}>
-      <span style={{fontSize:10,color:'#94A3B8',textTransform:'uppercase',fontWeight:600}}>Mecânicos</span>
-      <div style={{display:'flex',gap:6,flexWrap:'wrap',marginTop:4}}>{osMecs.map(m=><span key={m.id} style={{...badge('#3B82F6'),fontSize:11}}>🔧 {m.mecanicos?.nome}</span>)}</div>
+    {osMecs.length>0&&<div style={{padding:'8px 0',borderBottom:'1px solid #F1F5F9'}}>
+      <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
+        <span style={{fontSize:10,color:'#94A3B8',textTransform:'uppercase',fontWeight:600}}>Mecânicos & Tempo</span>
+        <span style={{fontSize:11,color:ACCENT,fontWeight:700}}>Total: {Math.round(osMecs.reduce((s,m)=>s+(m.tempo_minutos||0),0)/60*10)/10}h</span>
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:4}}>{osMecs.map(m=>{
+        const min=m.tempo_minutos||0, h=Math.floor(min/60), mm=min%60
+        const t = min>0 ? (h>0?`${h}h${mm?' '+mm+'min':''}`:`${mm}min`) : '—'
+        return <div key={m.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',background:'#F8FAFC',padding:'6px 10px',borderRadius:6,fontSize:11,flexWrap:'wrap',gap:6}}>
+          <span style={{color:'#0F172A',fontWeight:600}}>🔧 {m.mecanicos?.nome}</span>
+          <span style={{color:'#64748B'}}>{m.data_inicio?fmtDT(m.data_inicio):'—'} → {m.data_fim?fmtDT(m.data_fim):'em andamento'}</span>
+          <span style={{color:ACCENT,fontWeight:700}}>⏱ {t}</span>
+        </div>
+      })}</div>
     </div>}
     {os.descricao&&<div style={{marginTop:10}}><div style={{fontSize:10,color:'#94A3B8',textTransform:'uppercase',fontWeight:600,marginBottom:4}}>Descrição da Solicitação</div>
       <div style={{fontSize:12,color:'#334155',lineHeight:1.6,background:'#F1F5F9',padding:12,borderRadius:6}}>{os.descricao}</div></div>}
