@@ -1,0 +1,26 @@
+{
+  "name": "MANUTELOS - Gestão de Manutenção",
+  "short_name": "MANUTELOS",
+  "description": "Sistema de gestão de manutenção industrial - Fábrica de Algodão Telos",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F1F5F9",
+  "theme_color": "#1E40AF",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <rect width="192" height="192" fill="#1E40AF" rx="32"/>
+  <text x="96" y="76" font-family="Arial, sans-serif" font-size="28" font-weight="900" fill="#FFF" text-anchor="middle" letter-spacing="2">MANU</text>
+  <text x="96" y="112" font-family="Arial, sans-serif" font-size="28" font-weight="900" fill="#FFF" text-anchor="middle" letter-spacing="2">TELOS</text>
+  <rect x="32" y="130" width="128" height="3" fill="#FCD34D"/>
+  <text x="96" y="156" font-family="Arial, sans-serif" font-size="11" font-weight="600" fill="#CBD5E1" text-anchor="middle" letter-spacing="2">GESTÃO MANUT.</text>
+</svg>
