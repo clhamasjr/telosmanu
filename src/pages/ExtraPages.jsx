@@ -685,6 +685,28 @@ small{font-size:10px;color:#64748B}
   }
 
   const [gerandoOS, setGerandoOS] = useState(false)
+
+  const acionarCron = async () => {
+    if (!window.confirm('Gerar agora as OS preventivas de hoje?\n\nEsta ação consulta o cron automatizado que cria OS para todos os planos vencidos e reprograma para a próxima ocorrência.')) return
+    setGerandoOS(true)
+    try {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/preventiva-cron?secret=manutelos-cron-2026`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_ANON_KEY },
+      })
+      const result = await res.json()
+      if (res.ok && result.success) {
+        alert(`✅ Cron executado!\n\nOS geradas: ${result.gerados}\nPlanos verificados: ${result.total_planos}\nJá existentes hoje: ${result.ja_criadas}\n${result.erros?.length ? '\nErros: ' + result.erros.join('; ') : ''}`)
+        refetch()
+      } else {
+        alert(`Erro: ${result.error || 'Falha desconhecida'}`)
+      }
+    } catch (e) {
+      alert(`Erro de conexão: ${e.message}`)
+    }
+    setGerandoOS(false)
+  }
+
   const gerarOSDosVencidos = async () => {
     const vencs = data.filter(p => p.ativo !== false && p.data_programada && new Date(p.data_programada) < new Date())
     if (vencs.length === 0) { alert('Não há planos vencidos.'); return }
@@ -727,6 +749,7 @@ small{font-size:10px;color:#64748B}
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
       <h1 style={{ margin: 0, fontFamily: FONT_DISPLAY, fontSize: vp.isMobile ? 22 : 30, letterSpacing: 2, color: ACCENT }}>MANUTENÇÃO PREVENTIVA</h1>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <button style={{ ...S.btnS, color: '#3B82F6', borderColor: '#3B82F6', fontWeight: 700 }} onClick={acionarCron} disabled={gerandoOS}>🤖 {gerandoOS ? 'Executando...' : 'Cron Diário'}</button>
         <button style={{ ...S.btnS, color: '#EF4444', borderColor: '#EF4444', fontWeight: 700 }} onClick={gerarOSDosVencidos} disabled={gerandoOS}>⚠️ {gerandoOS ? 'Gerando...' : `Gerar OS Vencidas (${vencidos.length})`}</button>
         <button style={{ ...S.btnS, color: '#F59E0B', borderColor: '#F59E0B', fontWeight: 700 }} onClick={analisarHistorico} disabled={gerandoIA}>🤖 {gerandoIA ? 'Analisando...' : 'Gerar Plano IA'}</button>
         <button style={{ ...S.btnS, color: '#22C55E', borderColor: '#22C55E' }} onClick={exportarCSV}>📊 CSV</button>
