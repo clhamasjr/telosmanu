@@ -372,6 +372,26 @@ function AtenderOS({os,statusList,mecanicos,onDone,mobile}) {
   const [descExec,setDescExec]=useState(os.descricao_execucao||'')
   const [saving,setSaving]=useState(false)
   const isAberta=os.status_os?.nome==='Aberta'
+  const isPreventiva = os.tipos_manutencao?.nome === 'Preventiva'
+  // Extrair itens do procedimento (linhas numeradas como "1. ..." ou "- ..." ou simplesmente quebra de linha)
+  const procedimentoItens = useMemo(() => {
+    const fonte = os.descricao || ''
+    if (!isPreventiva) return []
+    const linhas = fonte.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 3)
+    return linhas
+  }, [os.descricao, isPreventiva])
+  const [check, setCheck] = useState({})
+  const toggleCheck = (i) => setCheck(c => ({ ...c, [i]: !c[i] }))
+  const aplicarChecklist = () => {
+    if (procedimentoItens.length === 0) return
+    const feitos = procedimentoItens.filter((_, i) => check[i])
+    if (feitos.length === 0) { alert('Marque pelo menos um item executado.'); return }
+    const texto = feitos.map(t => `✓ ${t}`).join('\n')
+    setDescExec(prev => prev ? prev + '\n' + texto : texto)
+  }
+  const marcarTodos = () => {
+    const novo = {}; procedimentoItens.forEach((_, i) => novo[i] = true); setCheck(novo)
+  }
   const iniciar=async()=>{const st=statusList.find(s=>s.nome==='Em Andamento');await supabase.from('ordens_servico').update({status_id:st?.id,data_inicio:new Date().toISOString()}).eq('id',os.id);onDone()}
   const finalizar=async()=>{
     setSaving(true)
@@ -390,6 +410,21 @@ function AtenderOS({os,statusList,mecanicos,onDone,mobile}) {
       <div style={{fontSize:10,color:'#94A3B8',marginTop:6}}>Registra data/hora de início</div>
     </div>:<>
       <OSMecanicos osId={os.id} mecanicos={mecanicos}/>
+      {isPreventiva && procedimentoItens.length > 0 && <div style={{background:'#FFFBEB',border:'1px solid #FCD34D',borderRadius:8,padding:12,marginBottom:14}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8,flexWrap:'wrap',gap:6}}>
+          <div style={{fontSize:11,color:'#92400E',fontWeight:700,textTransform:'uppercase'}}>📋 Checklist do Procedimento ({Object.values(check).filter(Boolean).length}/{procedimentoItens.length})</div>
+          <div style={{display:'flex',gap:6}}>
+            <button onClick={marcarTodos} style={{...S.btnS,padding:'3px 10px',fontSize:10,minHeight:24}}>✓ Todos</button>
+            <button onClick={aplicarChecklist} style={{...S.btnP,padding:'3px 10px',fontSize:10,minHeight:24,background:'#F59E0B'}}>↓ Aplicar ao serviço</button>
+          </div>
+        </div>
+        <div style={{display:'flex',flexDirection:'column',gap:4}}>{procedimentoItens.map((item, i) => (
+          <label key={i} style={{display:'flex',alignItems:'flex-start',gap:8,fontSize:12,padding:'4px 6px',cursor:'pointer',background:check[i]?'#FEF3C7':'transparent',borderRadius:4}}>
+            <input type="checkbox" checked={!!check[i]} onChange={() => toggleCheck(i)} style={{marginTop:2,width:16,height:16,cursor:'pointer',flexShrink:0}}/>
+            <span style={{color:check[i]?'#92400E':'#334155',textDecoration:check[i]?'line-through':'none',lineHeight:1.4}}>{item}</span>
+          </label>
+        ))}</div>
+      </div>}
       <Field label="Descrição do Serviço Realizado"><textarea style={{...S.input,minHeight:80,resize:'vertical'}} value={descExec} onChange={e=>setDescExec(e.target.value)} placeholder="O que foi feito..."/></Field>
       <OSMateriais osId={os.id}/>
       <div style={{display:'flex',justifyContent:'flex-end',gap:8,paddingTop:12,marginTop:10,borderTop:'1px solid #E2E8F0'}}>
