@@ -20,7 +20,21 @@ export default function App() {
   })
   const [page, setPage] = useState('dashboard')
   const [osStatusFilter, setOsStatusFilter] = useState(null)
+  const [qrEquipCode, setQrEquipCode] = useState(null)
   const vp = useViewport()
+
+  // Detectar QR code escaneado (?nova_os=1&equipamento=CODIGO)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const novaOS = params.get('nova_os')
+    const equip = params.get('equipamento')
+    if (novaOS === '1' && equip && user) {
+      setQrEquipCode(equip)
+      setPage('ordens')
+      // Limpar URL pra não ficar repetindo
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [user])
 
   const handleLogin = (u) => setUser(u)
   const handleLogout = () => {
@@ -45,7 +59,7 @@ export default function App() {
       <StatusBanner />
       <Layout page={page} setPage={(p) => { if (allowed.includes(p)) { setPage(p); if (p !== 'ordens') setOsStatusFilter(null) } }} vp={vp} user={user} onLogout={handleLogout} allowedPages={allowed}>
         {page === 'dashboard' && <Dashboard onNavigate={setPage} onFilterOS={navigateOS} />}
-        {page === 'ordens' && <OrdensServico initialStatusFilter={osStatusFilter} onClearFilter={() => setOsStatusFilter(null)} />}
+        {page === 'ordens' && <OrdensServico initialStatusFilter={osStatusFilter} onClearFilter={() => setOsStatusFilter(null)} qrEquipCode={qrEquipCode} onQrConsumed={() => setQrEquipCode(null)} />}
         {page === 'equipamentos' && allowed.includes('equipamentos') && <Equipamentos />}
         {page === 'mecanicos' && allowed.includes('mecanicos') && <Mecanicos />}
         {page === 'pecas' && allowed.includes('pecas') && <Pecas />}

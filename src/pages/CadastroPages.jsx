@@ -33,10 +33,83 @@ export function Equipamentos() {
     setModal(null)
   }
 
+  const baseUrl = () => (typeof window !== 'undefined' ? window.location.origin : 'https://manutelos.vercel.app')
+
+  const imprimirEtiqueta = (eq) => {
+    const url = `${baseUrl()}/?nova_os=1&equipamento=${encodeURIComponent(eq.codigo || eq.id)}`
+    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=${encodeURIComponent(url)}`
+    const area = areas.find(a => a.id === eq.area_id)?.nome || ''
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Etiqueta ${eq.codigo}</title>
+<style>
+@page{size:A6;margin:5mm}
+body{font-family:Arial,sans-serif;margin:0;padding:6mm}
+.lbl{border:2px solid #000;border-radius:6px;padding:10px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
+.brand{background:#1E40AF;color:#fff;font-weight:900;letter-spacing:3px;padding:3px 14px;font-size:11px;border-radius:3px}
+.cod{font-size:22px;font-weight:900;color:#000;letter-spacing:1px;margin-top:4px}
+.nome{font-size:11px;color:#333;font-weight:600;min-height:24px;line-height:1.2}
+.area{font-size:9px;color:#666;letter-spacing:1px;text-transform:uppercase}
+.qr{margin:4px 0}
+.dica{font-size:8px;color:#888;margin-top:2px}
+@media print{body{padding:0}}
+</style></head><body>
+<div class="lbl">
+  <div class="brand">MANUTELOS</div>
+  <div class="cod">${eq.codigo || '—'}</div>
+  <div class="nome">${eq.nome || ''}</div>
+  ${area ? `<div class="area">${area}</div>` : ''}
+  <img class="qr" src="${qrSrc}" alt="QR" width="180" height="180"/>
+  <div class="dica">📱 Aponte a câmera para abrir OS</div>
+</div>
+<script>setTimeout(()=>window.print(),500)</script>
+</body></html>`
+    const w = window.open('', '_blank')
+    w.document.write(html); w.document.close()
+  }
+
+  const imprimirTodasEtiquetas = () => {
+    const itens = filtered
+    if (itens.length === 0) { alert('Nenhum equipamento para imprimir'); return }
+    if (!window.confirm(`Imprimir etiquetas de ${itens.length} equipamento(s)?`)) return
+    const blocos = itens.map(eq => {
+      const url = `${baseUrl()}/?nova_os=1&equipamento=${encodeURIComponent(eq.codigo || eq.id)}`
+      const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=${encodeURIComponent(url)}`
+      const area = areas.find(a => a.id === eq.area_id)?.nome || ''
+      return `<div class="lbl">
+  <div class="brand">MANUTELOS</div>
+  <div class="cod">${eq.codigo || '—'}</div>
+  <div class="nome">${(eq.nome||'').substring(0,40)}</div>
+  ${area ? `<div class="area">${area}</div>` : ''}
+  <img class="qr" src="${qrSrc}" alt="QR" width="130" height="130"/>
+</div>`
+    }).join('')
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Etiquetas MANUTELOS</title>
+<style>
+@page{size:A4;margin:6mm}
+body{font-family:Arial,sans-serif;margin:0;padding:4mm;display:grid;grid-template-columns:repeat(3,1fr);gap:4mm}
+.lbl{border:1.5px solid #000;border-radius:4px;padding:6px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:3px;page-break-inside:avoid}
+.brand{background:#1E40AF;color:#fff;font-weight:900;letter-spacing:2px;padding:2px 10px;font-size:9px;border-radius:2px}
+.cod{font-size:16px;font-weight:900;color:#000;letter-spacing:1px;margin-top:2px}
+.nome{font-size:9px;color:#333;font-weight:600;min-height:22px;line-height:1.2}
+.area{font-size:7px;color:#666;text-transform:uppercase;letter-spacing:1px}
+.qr{margin:2px 0}
+@media print{body{padding:0}}
+</style></head><body>${blocos}
+<script>setTimeout(()=>window.print(),800)</script>
+</body></html>`
+    const w = window.open('', '_blank')
+    w.document.write(html); w.document.close()
+  }
+
   if (loading) return <Loading />
 
   return <div>
-    <Header title="EQUIPAMENTOS" action={novo} label="+ NOVO" mobile={vp.isMobile} />
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14,flexWrap:'wrap',gap:8}}>
+      <h1 style={{margin:0,fontFamily:FONT_DISPLAY,fontSize:vp.isMobile?22:30,letterSpacing:2,color:ACCENT}}>EQUIPAMENTOS</h1>
+      <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+        <button style={{...S.btnS,color:'#A855F7',borderColor:'#A855F7'}} onClick={imprimirTodasEtiquetas}>🏷️ Imprimir Etiquetas QR</button>
+        <button style={S.btnP} onClick={novo}>+ NOVO</button>
+      </div>
+    </div>
     <div style={{display:'flex',gap:10,marginBottom:16,flexWrap:'wrap',alignItems:'center'}}>
       <Search value={search} onChange={setSearch} ph="Nome, código, TAG..." />
       <select style={{...S.select,width:160}} value={fArea} onChange={e=>setFA(e.target.value)}><option value="TODOS">Todas Áreas</option>{areas.map(a=><option key={a.id} value={a.id}>{a.nome}</option>)}</select>
@@ -57,8 +130,9 @@ export function Equipamentos() {
           {e.tag&&<div style={{fontSize:12,color:'#64748B',marginBottom:4}}>TAG: {e.tag}</div>}
           {familias.find(f=>f.id===e.familia_id)&&<div style={{fontSize:11,color:'#8B5CF6',marginBottom:3}}>Família: {familias.find(f=>f.id===e.familia_id)?.nome}</div>}
           <div style={{fontSize:12,color:'#64748B',marginBottom:8}}>{areas.find(a=>a.id===e.area_id)?.nome||'Sem área'}{e.fabricante?' · '+e.fabricante:''}</div>
-          <div style={{display:'flex',gap:6}}>
+          <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
             <button style={{...S.btnS,flex:1,fontSize:11}} onClick={()=>setHistEquip(e)}>📊 Histórico</button>
+            <button style={{...S.btnS,fontSize:11,color:'#A855F7',borderColor:'#A855F7'}} onClick={()=>imprimirEtiqueta(e)}>🏷️ QR</button>
             <button style={{...S.btnS,fontSize:11}} onClick={()=>{setItem({...e});setModal('editar')}}>✏️ Editar</button>
           </div>
         </div>

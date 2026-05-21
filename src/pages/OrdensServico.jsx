@@ -9,7 +9,7 @@ import { getPermissao } from '../lib/constants'
 const hoje = () => new Date().toISOString().split('T')[0]
 const mesFrom = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01` }
 
-export default function OrdensServico({ initialStatusFilter, onClearFilter }) {
+export default function OrdensServico({ initialStatusFilter, onClearFilter, qrEquipCode, onQrConsumed }) {
   const { areas, statusList, tiposMan, tiposFalha, mecanicos, equipamentos } = useLookups()
   const vp = useViewport()
   const { user, perfil } = useUser()
@@ -41,6 +41,26 @@ export default function OrdensServico({ initialStatusFilter, onClearFilter }) {
   useEffect(() => {
     if (initialStatusFilter && statusList.length>0) { const st=statusList.find(s=>s.nome===initialStatusFilter); if(st) setFS(st.id); aplicarPreset('tudo') }
   }, [initialStatusFilter, statusList])
+
+  // QR code scaneado: abre nova OS pré-preenchida com o equipamento
+  useEffect(() => {
+    if (!qrEquipCode || equipamentos.length === 0 || !statusList.length) return
+    // tentar achar por código ou por id
+    const eq = equipamentos.find(e => e.codigo === qrEquipCode || e.id === qrEquipCode)
+    if (eq) {
+      setOs({
+        numero_ordem:'', equipamento_id: eq.id, area_id: eq.area_id || '', tipo_manutencao_id:'', tipo_falha_id:'',
+        descricao:'', descricao_execucao:'', prioridade:'Media', solicitante: user?.nome || '', observacoes:'',
+        recebido_por:'', data_recebimento:'', executado_por:'', resp_manutencao:'', liberado_por:'',
+        tem_pendencia:false, pendencia_melhoria:false, pendencia_terceiros:false, pendencia_aguard_material:false,
+        status_id: statusList.find(s=>s.nome==='Aberta')?.id || '',
+      })
+      setModal('nova')
+    } else {
+      alert(`Equipamento não encontrado: ${qrEquipCode}`)
+    }
+    onQrConsumed?.()
+  }, [qrEquipCode, equipamentos, statusList])
 
   useEffect(() => {
     let c=false
