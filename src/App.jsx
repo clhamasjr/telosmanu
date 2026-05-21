@@ -2,6 +2,7 @@ import React, { useState, useEffect, createContext, useContext } from 'react'
 import { useViewport } from './hooks/useData'
 import Layout from './components/Layout'
 import Login from './components/Login'
+import StatusBanner from './components/StatusBanner'
 import Dashboard from './pages/Dashboard'
 import OrdensServico from './pages/OrdensServico'
 import { Equipamentos, Mecanicos, Pecas, Areas } from './pages/CadastroPages'
@@ -29,7 +30,7 @@ export default function App() {
   }
 
   // If not logged in, show login
-  if (!user) return <Login onLogin={handleLogin} />
+  if (!user) return <><StatusBanner /><Login onLogin={handleLogin} /></>
 
   const perfil = user.perfil || 'visualizador'
   const allowed = getPaginas(perfil)
@@ -41,6 +42,7 @@ export default function App() {
 
   return (
     <UserContext.Provider value={{ user, perfil, logout: handleLogout }}>
+      <StatusBanner />
       <Layout page={page} setPage={(p) => { if (allowed.includes(p)) { setPage(p); if (p !== 'ordens') setOsStatusFilter(null) } }} vp={vp} user={user} onLogout={handleLogout} allowedPages={allowed}>
         {page === 'dashboard' && <Dashboard onNavigate={setPage} onFilterOS={navigateOS} />}
         {page === 'ordens' && <OrdensServico initialStatusFilter={osStatusFilter} onClearFilter={() => setOsStatusFilter(null)} />}
