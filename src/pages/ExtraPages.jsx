@@ -136,28 +136,45 @@ export function Relatorios() {
         omPg++; if (omPg > 30) break
       }
 
+      // ── Mapa de duração por OS (data_conclusao - data_inicio da própria OS) ──
+      // Usado como fallback quando os_mecanicos não tem tempo gravado
+      const osDurationMap = {}
+      allOS.forEach(o => {
+        if (o.data_inicio && o.data_conclusao) {
+          const min = Math.round((new Date(o.data_conclusao) - new Date(o.data_inicio)) / 60000)
+          if (min > 0 && min < 72 * 60) osDurationMap[o.id] = min // cap 72h
+        }
+      })
+
       // ── Montar mapa de mecânicos com HH real ──
-      // Chave = mecanico_id (UUID) quando disponível → evita duplicatas Bruno/BRUNO/bruno
+      // Chave = mecanico_id (UUID) para evitar duplicatas Bruno/BRUNO/bruno
       const mecMap = {}
 
       const addHH = (mecId, mecNome, minutos, osId) => {
-        const key = mecId || ('nome:' + (mecNome || '?').toLowerCase().trim())
+        if (!mecId) return // ignora entradas sem UUID — evita poluição de nomes brutos
         const nome = mecNome || 'Não identificado'
-        if (!mecMap[key]) mecMap[key] = { nome, total: 0, tempoTotal: 0, osIds: new Set() }
-        if (mecId && mecMap[key].nome !== nome) mecMap[key].nome = nome
-        mecMap[key].tempoTotal += Math.max(0, minutos || 0)
-        if (osId && !mecMap[key].osIds.has(osId)) {
-          mecMap[key].osIds.add(osId)
-          mecMap[key].total++
+        if (!mecMap[mecId]) mecMap[mecId] = { nome, total: 0, tempoTotal: 0, osIds: new Set() }
+        if (mecMap[mecId].nome !== nome && nome !== 'Não identificado') mecMap[mecId].nome = nome
+        mecMap[mecId].tempoTotal += Math.max(0, minutos || 0)
+        if (osId && !mecMap[mecId].osIds.has(osId)) {
+          mecMap[mecId].osIds.add(osId)
+          mecMap[mecId].total++
         }
       }
 
+      // OS que já têm registro em os_mecanicos (não duplicar via executado_por)
+      const osComRegistroMec = new Set(allOsMecs.map(h => h.ordem_servico_id))
+
       // 1. os_mecanicos (dados novos — maior prioridade)
-      // Se tempo_minutos não estiver gravado, calcula a partir de data_inicio e data_fim
       allOsMecs.forEach(h => {
         let min = h.tempo_minutos
+        // tenta data_fim - data_inicio do próprio registro
         if ((!min || min === 0) && h.data_inicio && h.data_fim) {
           min = Math.max(0, Math.round((new Date(h.data_fim) - new Date(h.data_inicio)) / 60000))
+        }
+        // fallback: usa duração da OS inteira
+        if ((!min || min === 0) && osDurationMap[h.ordem_servico_id]) {
+          min = osDurationMap[h.ordem_servico_id]
         }
         addHH(h.mecanico_id, h.mecanicos?.nome, min, h.ordem_servico_id)
       })
@@ -165,22 +182,23 @@ export function Relatorios() {
       // 2. apontamento_hh (dados legados SOFMAN)
       allHH.forEach(h => addHH(h.mecanico_id, h.mecanicos?.nome, h.tempo_minutos, h.ordem_servico_id))
 
-      // 3. Fallback: executado_por das OS — normalizar via tabela mecanicos para evitar duplicatas
+      // 3. Fallback: executado_por — apenas OS sem os_mecanicos e só se encontrar mecânico cadastrado
       allOS.forEach(o => {
+        if (osComRegistroMec.has(o.id)) return // já tem registro via os_mecanicos
         const exec = (o.executado_por || '').trim()
         if (!exec) return
         const mecMatch = (mecs || []).find(m => m.nome.toLowerCase() === exec.toLowerCase())
-        const mecId = mecMatch ? mecMatch.id : null
-        const nome = mecMatch ? mecMatch.nome : exec
-        addHH(mecId, nome, 0, o.id)
+        if (!mecMatch) return // pula nomes compostos ou não cadastrados
+        const min = osDurationMap[o.id] || 0
+        addHH(mecMatch.id, mecMatch.nome, min, o.id)
       })
 
-      // 4. Mecânicos cadastrados sem nenhuma OS no período (mostrar com 0)
+      // 4. Todos os mecânicos ativos — garante que aparecem mesmo sem OS
       ;(mecs || []).forEach(m => {
         if (!mecMap[m.id]) mecMap[m.id] = { nome: m.nome, total: 0, tempoTotal: 0, osIds: new Set() }
       })
 
-      const osPorMec = Object.entries(mecMap).map(([, v]) => ({
+      const osPorMec = Object.values(mecMap).map(v => ({
         nome: v.nome, total: v.total, tempoTotal: v.tempoTotal, tempoMedio: v.total > 0 ? v.tempoTotal / v.total : 0,
       })).sort((a, b) => b.total - a.total)
 
