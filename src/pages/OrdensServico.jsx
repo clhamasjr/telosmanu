@@ -223,12 +223,12 @@ export default function OrdensServico({ initialStatusFilter, onClearFilter, qrEq
           <div style={{fontSize:11,color:'#334155',marginBottom:3}}>{(o.descricao||'').substring(0,60)}</div>
           <div style={{display:'flex',gap:6,fontSize:10,color:'#64748B',flexWrap:'wrap'}}>
             {o.tipos_manutencao&&<span style={badge(o.tipos_manutencao.nome==='Corretiva'?'#EF4444':'#3B82F6')}>{o.tipos_manutencao.nome}</span>}
-            <span>{o.areas?.nome}</span><span>📝 {o.solicitante||'—'}</span><span>{fmtDate(o.data_abertura)}</span>
+            <span>{o.areas?.nome}</span><span>📝 {o.solicitante||'—'}</span><span>{fmtDate(o.data_recebimento||o.data_abertura)}</span>
           </div>
         </div>
       )}</div>:
       <div style={{overflowX:'auto'}}><table style={{width:'100%',borderCollapse:'collapse'}}><thead><tr>
-        <th style={S.th}>Nº</th><th style={S.th}>Equipamento</th><th style={S.th}>Descrição</th><th style={S.th}>Tipo</th><th style={S.th}>Área</th><th style={S.th}>Status</th><th style={S.th}>Solicitante</th><th style={S.th}>Data</th><th style={S.th}></th>
+        <th style={S.th}>Nº</th><th style={S.th}>Equipamento</th><th style={S.th}>Descrição</th><th style={S.th}>Tipo</th><th style={S.th}>Área</th><th style={S.th}>Status</th><th style={S.th}>Solicitante</th><th style={S.th}>Data Receb.</th><th style={S.th}></th>
       </tr></thead><tbody>{filtered.slice(0,200).map(o=>
         <tr key={o.id} style={{cursor:'pointer'}} onMouseEnter={e=>e.currentTarget.style.background='#F1F5F9'} onMouseLeave={e=>e.currentTarget.style.background='transparent'} onClick={()=>{setOs({...o});setModal('ver')}}>
           <td style={{...S.td,color:ACCENT,fontWeight:700,fontSize:12}}>#{o.numero_ordem||'—'}</td>
@@ -238,7 +238,7 @@ export default function OrdensServico({ initialStatusFilter, onClearFilter, qrEq
           <td style={{...S.td,fontSize:11}}>{o.areas?.nome||'—'}</td>
           <td style={S.td}><StatusBadge status={o.status_os}/></td>
           <td style={{...S.td,fontSize:11,color:'#999'}}>{o.solicitante||'—'}</td>
-          <td style={{...S.td,fontSize:10,color:'#64748B'}}>{fmtDate(o.data_abertura)}</td>
+          <td style={{...S.td,fontSize:10,color:'#64748B'}}>{fmtDate(o.data_recebimento||o.data_abertura)}</td>
           <td style={S.td}><div style={{display:'flex',gap:3}}>
             {canEdit&&<button style={{...S.btnS,padding:'3px 6px',minHeight:26,fontSize:9}} onClick={e=>{e.stopPropagation();openEdit(o)}}>✏️</button>}
             {canAtender&&o.status_os?.nome!=='Concluída'&&o.status_os?.nome!=='Aguardando Aprovação'&&<button style={{...S.btnS,padding:'3px 6px',minHeight:26,fontSize:9,color:'#3B82F6',borderColor:'#3B82F6'}} onClick={e=>{e.stopPropagation();setOs({...o});setModal('atender')}}>🔧</button>}
