@@ -418,12 +418,23 @@ function OSMecanicos({osId, mecanicos}) {
   }
 
   const finalizar = async (m) => {
-    const { data: row } = await supabase.from('os_mecanicos').update({ data_fim: new Date().toISOString() }).eq('id', m.id).select('*,mecanicos(id,nome)').single()
+    const agora = new Date()
+    const inicio = m.data_inicio ? new Date(m.data_inicio) : agora
+    const tempoMin = Math.max(0, Math.round((agora - inicio) / 60000))
+    const { data: row } = await supabase.from('os_mecanicos')
+      .update({ data_fim: agora.toISOString(), tempo_minutos: tempoMin })
+      .eq('id', m.id).select('*,mecanicos(id,nome)').single()
     if (row) setLinked(p => p.map(x => x.id === m.id ? row : x))
   }
 
   const editar = async (m, campo, valor) => {
     const upd = { [campo]: valor || null }
+    // Recalcula tempo_minutos sempre que inicio ou fim mudar
+    const inicio = campo === 'data_inicio' ? (valor || null) : m.data_inicio
+    const fim = campo === 'data_fim' ? (valor || null) : m.data_fim
+    if (inicio && fim) {
+      upd.tempo_minutos = Math.max(0, Math.round((new Date(fim) - new Date(inicio)) / 60000))
+    }
     const { data: row } = await supabase.from('os_mecanicos').update(upd).eq('id', m.id).select('*,mecanicos(id,nome)').single()
     if (row) setLinked(p => p.map(x => x.id === m.id ? row : x))
   }
