@@ -8,6 +8,7 @@ import { getPermissao } from '../lib/constants'
 
 const hoje = () => new Date().toISOString().split('T')[0]
 const mesFrom = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01` }
+const agoraLocal = () => { const d = new Date(); const p = n => String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:00` }
 
 export default function OrdensServico({ initialStatusFilter, onClearFilter, qrEquipCode, onQrConsumed }) {
   const { areas, statusList, tiposMan, tiposFalha, mecanicos, equipamentos } = useLookups()
@@ -54,6 +55,7 @@ export default function OrdensServico({ initialStatusFilter, onClearFilter, qrEq
         recebido_por:'', data_recebimento:'', executado_por:'', resp_manutencao:'', liberado_por:'',
         tem_pendencia:false, pendencia_melhoria:false, pendencia_terceiros:false, pendencia_aguard_material:false,
         status_id: statusList.find(s=>s.nome==='Aberta')?.id || '',
+        data_abertura: agoraLocal(),
       })
       setModal('nova')
     } else {
@@ -107,6 +109,7 @@ export default function OrdensServico({ initialStatusFilter, onClearFilter, qrEq
       recebido_por:'', data_recebimento:'', executado_por:'', resp_manutencao:'', liberado_por:'',
       tem_pendencia:false, pendencia_melhoria:false, pendencia_terceiros:false, pendencia_aguard_material:false,
       status_id:statusList.find(s=>s.nome==='Aberta')?.id||'',
+      data_abertura: agoraLocal(),
     })
     setModal('nova')
   }
@@ -303,6 +306,7 @@ function OSForm({os,setOs,onSave,onCancel,onDel,areas,equipamentos,mecanicos,sta
       </div>
     </div>
     <div style={{display:'grid',gridTemplateColumns:mobile?'1fr':'1fr 1fr',gap:'0 14px'}}>
+      <Field label="📅 Data de Abertura" req><input type="datetime-local" style={S.input} value={os.data_abertura?os.data_abertura.substring(0,16):''} onChange={e=>u('data_abertura',e.target.value?e.target.value+':00':null)}/></Field>
       <Field label="Solicitante" req><input style={{...S.input,background:'#F1F5F9',fontWeight:600}} value={os.solicitante||''} readOnly={isSolic} onChange={e=>u('solicitante',e.target.value)}/></Field>
       <Field label={'Área / Localização'+(isLocked?' 🔒':'')} req><select style={{...S.select,opacity:isLocked?.6:1}} value={os.area_id||''} onChange={e=>u('area_id',e.target.value)} disabled={isLocked}><option value="">Selecione *</option>{areas.map(a=><option key={a.id} value={a.id}>{a.nome}</option>)}</select></Field>
       <Field label={'Tipo de Manutenção'+(isLocked?' 🔒':'')} req><select style={{...S.select,opacity:isLocked?.6:1}} value={os.tipo_manutencao_id||''} onChange={e=>u('tipo_manutencao_id',e.target.value)} disabled={isLocked}><option value="">Selecione *</option>{tiposMan.map(t=><option key={t.id} value={t.id}>{t.nome}</option>)}</select></Field>
