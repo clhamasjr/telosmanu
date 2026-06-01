@@ -338,13 +338,20 @@ export function Mecanicos() {
   const { areas } = useLookups()
   const vp = useViewport()
   const [search, setSearch] = useState('')
+  const [fAtivo, setFAtivo] = useState('ativo')
   const [modal, setModal] = useState(null)
   const [item, setItem] = useState(null)
   const [confirm, setConfirm] = useState(null)
   const [detailMec, setDetailMec] = useState(null)
   const [periodo, setPeriodo] = useState({ from:'2024-01-01', to:new Date().toISOString().split('T')[0] })
 
-  const filtered = data.filter(m=>{if(!search)return true;const s=search.toLowerCase();return(m.nome||'').toLowerCase().includes(s)||(m.matricula||'').toLowerCase().includes(s)})
+  const filtered = data.filter(m=>{
+    if(fAtivo==='ativo'&&m.ativo===false)return false
+    if(fAtivo==='inativo'&&m.ativo!==false)return false
+    if(!search)return true
+    const s=search.toLowerCase()
+    return(m.nome||'').toLowerCase().includes(s)||(m.matricula||'').toLowerCase().includes(s)
+  })
   const novo = ()=>{setItem({nome:'',matricula:'',especialidade:'',telefone:'',area_id:'',turno:'A',ativo:true,custo_hora:0});setModal('novo')}
   const salvar = async()=>{
     if(!(item.nome||'').trim())return
@@ -358,9 +365,15 @@ export function Mecanicos() {
 
   return <div>
     <Header title="MECÂNICOS" action={novo} label="+ NOVO" mobile={vp.isMobile}/>
-    <div style={{display:'flex',gap:10,marginBottom:16,alignItems:'center'}}>
+    <div style={{display:'flex',gap:8,marginBottom:16,alignItems:'center',flexWrap:'wrap'}}>
       <Search value={search} onChange={setSearch} ph="Nome, matrícula..."/>
-      <span style={{fontSize:11,color:'#94A3B8',whiteSpace:'nowrap'}}>{filtered.filter(m=>m.ativo).length} ativo(s)</span>
+      {[['ativo','✅ Ativos'],['inativo','❌ Inativos'],['todos','Todos']].map(([v,l])=>(
+        <button key={v} onClick={()=>setFAtivo(v)} style={{...S.btnS,padding:'6px 12px',minHeight:30,fontSize:11,fontWeight:600,
+          background:fAtivo===v?ACCENT+'22':'transparent',color:fAtivo===v?ACCENT:'#64748B',borderColor:fAtivo===v?ACCENT:'#CBD5E1'}}>
+          {l}
+        </button>
+      ))}
+      <span style={{fontSize:11,color:'#94A3B8',whiteSpace:'nowrap'}}>{filtered.length} exibido(s)</span>
     </div>
 
     {filtered.length===0?<Empty icon="👨‍🔧" msg="Nenhum mecânico" action="Cadastrar" onAction={novo}/>:
