@@ -364,7 +364,7 @@ export function Mecanicos() {
   if(loading) return <Loading/>
 
   return <div>
-    <Header title="MECÂNICOS" action={novo} label="+ NOVO" mobile={vp.isMobile}/>
+    <Header title="TÉCNICOS" action={novo} label="+ NOVO" mobile={vp.isMobile}/>
     <div style={{display:'flex',gap:8,marginBottom:16,alignItems:'center',flexWrap:'wrap'}}>
       <Search value={search} onChange={setSearch} ph="Nome, matrícula..."/>
       {[['ativo','✅ Ativos'],['inativo','❌ Inativos'],['todos','Todos']].map(([v,l])=>(
@@ -376,7 +376,7 @@ export function Mecanicos() {
       <span style={{fontSize:11,color:'#94A3B8',whiteSpace:'nowrap'}}>{filtered.length} exibido(s)</span>
     </div>
 
-    {filtered.length===0?<Empty icon="👨‍🔧" msg="Nenhum mecânico" action="Cadastrar" onAction={novo}/>:
+    {filtered.length===0?<Empty icon="👨‍🔧" msg="Nenhum técnico" action="Cadastrar" onAction={novo}/>:
       <div style={{display:'grid',gridTemplateColumns:vp.isMobile?'1fr':'repeat(auto-fill,minmax(340px,1fr))',gap:14}}>
         {filtered.map(m=><div key={m.id} style={{...S.card}}>
           <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
@@ -400,7 +400,7 @@ export function Mecanicos() {
       {detailMec&&<MecDetalhe nome={detailMec.nome} mecanicoId={detailMec.id} periodo={periodo} setPeriodo={setPeriodo}/>}
     </Modal>
 
-    <Modal open={!!modal} onClose={()=>setModal(null)} title={modal==='novo'?'NOVO MECÂNICO':'EDITAR MECÂNICO'} mobile={vp.isMobile}>
+    <Modal open={!!modal} onClose={()=>setModal(null)} title={modal==='novo'?'NOVO TÉCNICO':'EDITAR TÉCNICO'} mobile={vp.isMobile}>
       {item&&<div>
         <div style={{display:'grid',gridTemplateColumns:vp.isMobile?'1fr':'1fr 1fr',gap:'0 16px'}}>
           <Field label="Nome" req><input style={S.input} value={item.nome||''} onChange={e=>setItem({...item,nome:e.target.value})}/></Field>

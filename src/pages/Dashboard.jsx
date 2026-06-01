@@ -169,7 +169,7 @@ export default function Dashboard({ onNavigate, onFilterOS }) {
 
     {/* Mecânicos em atendimento AGORA */}
     {mecAtendendo.length>0&&<div style={{...S.card,borderLeft:'3px solid #3B82F6',marginBottom:16}}>
-      <h3 style={{margin:'0 0 10px',fontSize:11,color:'#3B82F6',textTransform:'uppercase',letterSpacing:1}}>🔧 Mecânicos em Atendimento Agora ({mecAtendendo.length})</h3>
+      <h3 style={{margin:'0 0 10px',fontSize:11,color:'#3B82F6',textTransform:'uppercase',letterSpacing:1}}>🔧 Técnicos em Atendimento Agora ({mecAtendendo.length})</h3>
       {mecAtendendo.map((m,i)=><div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0',borderBottom:'1px solid #F1F5F9',flexWrap:'wrap',gap:6}}>
         <div>
           <div style={{fontSize:14,fontWeight:700,color:'#0F172A'}}>👨‍🔧 {m.mecanico}</div>
@@ -209,7 +209,7 @@ export default function Dashboard({ onNavigate, onFilterOS }) {
 
       <div style={S.card}>
         <h3 style={{margin:'0 0 10px',fontSize:11,color:'#64748B',textTransform:'uppercase',letterSpacing:1}}>Resumo Geral</h3>
-        {[['⚙️ Equipamentos',kpis.eqCount],['👨‍🔧 Mecânicos',kpis.mecCount],['📋 Total OS',kpis.totalOS]].map(([l,v])=>
+        {[['⚙️ Equipamentos',kpis.eqCount],['👨‍🔧 Técnicos',kpis.mecCount],['📋 Total OS',kpis.totalOS]].map(([l,v])=>
           <div key={l} style={{display:'flex',justifyContent:'space-between',padding:'7px 0',borderBottom:'1px solid #F1F5F9',fontSize:12}}>
             <span style={{color:'#999'}}>{l}</span><span style={{color:'#0F172A',fontWeight:700}}>{v||0}</span>
           </div>)}

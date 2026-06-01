@@ -68,7 +68,7 @@ export const PERFIS_CONFIG = {
     },
   },
   mecanico: {
-    label: 'Mecânico / Manutencista',
+    label: 'Técnico / Manutencista',
     icon: '🔧',
     cor: '#3B82F6',
     nivel: 4,
@@ -134,7 +134,7 @@ export const NAV = [
   {key:'dashboard',label:'Dashboard',icon:'📊',short:'Dash'},
   {key:'ordens',label:'Ordens de Serviço',icon:'📋',short:'OS'},
   {key:'equipamentos',label:'Equipamentos',icon:'⚙️',short:'Equip'},
-  {key:'mecanicos',label:'Mecânicos',icon:'👨‍🔧',short:'Mec'},
+  {key:'mecanicos',label:'Técnicos',icon:'👨‍🔧',short:'Téc'},
   {key:'pecas',label:'Estoque',icon:'📦',short:'Peças'},
   {key:'areas',label:'Áreas & Equip.',icon:'🏭',short:'Áreas'},
   {key:'mapa',label:'Mapa da Fábrica',icon:'🗺️',short:'Mapa'},

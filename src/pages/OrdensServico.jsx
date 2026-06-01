@@ -461,12 +461,12 @@ function OSMecanicos({osId, mecanicos}) {
   return <div style={{ marginBottom: 14, background: '#F8FAFC', borderRadius: 8, padding: 12, border: '1px solid #E2E8F0' }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 6 }}>
       <div style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>
-        👨‍🔧 Mecânicos ({linked.length}) {totalMin > 0 && <span style={{ color: ACCENT, marginLeft: 6 }}>· Total: {fmtMin(totalMin)}</span>}
+        👨‍🔧 Técnicos ({linked.length}) {totalMin > 0 && <span style={{ color: ACCENT, marginLeft: 6 }}>· Total: {fmtMin(totalMin)}</span>}
       </div>
-      {!showAdd && disponiveis.length > 0 && <button style={{ ...S.btnP, padding: '4px 12px', fontSize: 11, minHeight: 28 }} onClick={() => setShowAdd(true)}>+ Adicionar Mecânico</button>}
+      {!showAdd && disponiveis.length > 0 && <button style={{ ...S.btnP, padding: '4px 12px', fontSize: 11, minHeight: 28 }} onClick={() => setShowAdd(true)}>+ Adicionar Técnico</button>}
     </div>
 
-    {linked.length === 0 && <div style={{ fontSize: 11, color: '#94A3B8', textAlign: 'center', padding: 10 }}>Nenhum mecânico atribuído</div>}
+    {linked.length === 0 && <div style={{ fontSize: 11, color: '#94A3B8', textAlign: 'center', padding: 10 }}>Nenhum técnico atribuído</div>}
 
     {linked.map((m, i) => {
       const ativo = !m.data_fim
@@ -498,7 +498,7 @@ function OSMecanicos({osId, mecanicos}) {
 
     {showAdd && <div style={{ display: 'flex', gap: 6, marginTop: 8, padding: 8, background: '#FEF3C7', borderRadius: 6, alignItems: 'center', flexWrap: 'wrap' }}>
       <select style={{ ...S.select, flex: 1, fontSize: 11, minWidth: 160 }} value={mecSel} onChange={e => setMecSel(e.target.value)}>
-        <option value="">Selecione o mecânico...</option>
+        <option value="">Selecione o técnico...</option>
         {disponiveis.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
       </select>
       <button style={{ ...S.btnP, padding: '6px 14px', fontSize: 11, minHeight: 32 }} onClick={add} disabled={!mecSel}>▶ Iniciar Atendimento</button>
@@ -611,7 +611,7 @@ function OSDetail({os,onEdit,onAtender,onAprovar,mobile,perfil,mecanicos:allMec}
     const chk = (v) => causaFalha === v ? '☒' : '☐'
     const matsHTML = mats.map(m => `<tr><td>${esc(m.materiais?.nome || m.descricao || '')}</td><td>${esc(m.materiais?.unidade||'')}</td><td>${esc(m.quantidade)}</td></tr>`).join('')
     const fmtMinPrint = (min) => { if (!min || min <= 0) return '—'; const h = Math.floor(min/60), mm = min%60; return h>0 ? `${h}h${mm?' '+mm+'min':''}` : `${mm}min` }
-    const mecsTblHTML = osMecs.length > 0 ? `<table class="mec-tbl"><thead><tr><th>Mecânico</th><th>Início</th><th>Término</th><th>Tempo</th></tr></thead><tbody>${osMecs.map(m => `<tr><td>${esc(m.mecanicos?.nome||'')}</td><td>${esc(m.data_inicio?dt(m.data_inicio):'')}</td><td>${esc(m.data_fim?dt(m.data_fim):'em and.')}</td><td><b>${fmtMinPrint(m.tempo_minutos)}</b></td></tr>`).join('')}</tbody></table>` : ''
+    const mecsTblHTML = osMecs.length > 0 ? `<table class="mec-tbl"><thead><tr><th>Técnico</th><th>Início</th><th>Término</th><th>Tempo</th></tr></thead><tbody>${osMecs.map(m => `<tr><td>${esc(m.mecanicos?.nome||'')}</td><td>${esc(m.data_inicio?dt(m.data_inicio):'')}</td><td>${esc(m.data_fim?dt(m.data_fim):'em and.')}</td><td><b>${fmtMinPrint(m.tempo_minutos)}</b></td></tr>`).join('')}</tbody></table>` : ''
     const mecsHTML = osMecs.map(m => esc(m.mecanicos?.nome || '')).join(', ')
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>OS ${os.numero_ordem||''}</title>
 <style>
@@ -713,7 +713,7 @@ ${matsHTML?`<table class="mat-tbl"><thead><tr><th>Material</th><th>Un.</th><th>Q
     {os.liberado_por&&<R l="Liberado por" v={os.liberado_por}/>}
     {osMecs.length>0&&<div style={{padding:'8px 0',borderBottom:'1px solid #F1F5F9'}}>
       <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
-        <span style={{fontSize:10,color:'#94A3B8',textTransform:'uppercase',fontWeight:600}}>Mecânicos & Tempo</span>
+        <span style={{fontSize:10,color:'#94A3B8',textTransform:'uppercase',fontWeight:600}}>Técnicos & Tempo</span>
         <span style={{fontSize:11,color:ACCENT,fontWeight:700}}>Total: {Math.round(osMecs.reduce((s,m)=>s+(m.tempo_minutos||0),0)/60*10)/10}h</span>
       </div>
       <div style={{display:'flex',flexDirection:'column',gap:4}}>{osMecs.map(m=>{

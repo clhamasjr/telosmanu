@@ -288,7 +288,7 @@ export function Relatorios() {
   const tabs = [
     { key: 'kpis', label: '📊 KPIs', short: 'KPIs' },
     { key: 'equipamentos', label: '⚙️ Equipamentos', short: 'Equip' },
-    { key: 'mecanicos', label: '👨‍🔧 Mecânicos', short: 'Mec' },
+    { key: 'mecanicos', label: '👨‍🔧 Técnicos', short: 'Téc' },
     { key: 'sugestoes', label: '💡 Sugestões', short: 'Prev' },
   ]
 
@@ -344,8 +344,8 @@ export function Relatorios() {
           <Bar items={d.areaMap} color="#22C55E" />
         </div>
         <div style={S.card}>
-          <h3 style={{ margin: '0 0 12px', fontSize: 11, color: '#64748B', textTransform: 'uppercase', letterSpacing: 1 }}>⏱️ Controle de Horas Mecânicos</h3>
-          {d.osPorMec.length === 0 ? <div style={{ color: '#94A3B8', fontSize: 12, textAlign: 'center', padding: 16 }}>Nenhum mecânico cadastrado</div> :
+          <h3 style={{ margin: '0 0 12px', fontSize: 11, color: '#64748B', textTransform: 'uppercase', letterSpacing: 1 }}>⏱️ Controle de Horas Técnicos</h3>
+          {d.osPorMec.length === 0 ? <div style={{ color: '#94A3B8', fontSize: 12, textAlign: 'center', padding: 16 }}>Nenhum técnico cadastrado</div> :
           d.osPorMec.slice(0, 15).map(m => {
             const hrs = m.tempoTotal / 60
             const pct = d.horasDisponiveis > 0 ? Math.min(100, (hrs / d.horasDisponiveis) * 100) : 0
@@ -398,17 +398,17 @@ export function Relatorios() {
     {/* ── TAB: MECÂNICOS ── */}
     {tab === 'mecanicos' && <>
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
-        <KPI label="Mecânicos Ativos" value={d.osPorMec.length} accent={ACCENT} sub="Com OS no período" small={vp.isMobile} />
+        <KPI label="Técnicos Ativos" value={d.osPorMec.length} accent={ACCENT} sub="Com OS no período" small={vp.isMobile} />
         <KPI label="Total HH" value={`${(d.osPorMec.reduce((s, m) => s + m.tempoTotal, 0) / 60).toFixed(0)}h`} accent="#3B82F6" sub="Horas trabalhadas" small={vp.isMobile} />
-        <KPI label="Horas Disp." value={`${d.horasDisponiveis}h`} accent="#A855F7" sub="Por mecânico no período" small={vp.isMobile} />
+        <KPI label="Horas Disp." value={`${d.horasDisponiveis}h`} accent="#A855F7" sub="Por técnico no período" small={vp.isMobile} />
       </div>
       <div style={S.card}>
-        <h3 style={{ margin: '0 0 12px', fontSize: 11, color: '#64748B', textTransform: 'uppercase', letterSpacing: 1 }}>👨‍🔧 Hora-Homem por Mecânico</h3>
-        {d.osPorMec.length === 0 ? <div style={{ color: '#94A3B8', fontSize: 12, textAlign: 'center', padding: 20 }}>Nenhum mecânico cadastrado</div> :
+        <h3 style={{ margin: '0 0 12px', fontSize: 11, color: '#64748B', textTransform: 'uppercase', letterSpacing: 1 }}>👨‍🔧 Hora-Homem por Técnico</h3>
+        {d.osPorMec.length === 0 ? <div style={{ color: '#94A3B8', fontSize: 12, textAlign: 'center', padding: 20 }}>Nenhum técnico cadastrado</div> :
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead><tr>
-              <th style={S.th}>Mecânico</th><th style={S.th}>OS Atendidas</th><th style={S.th}>Horas Totais</th><th style={S.th}>T. Médio/OS</th><th style={S.th}>Ocupação</th>
+              <th style={S.th}>Técnico</th><th style={S.th}>OS Atendidas</th><th style={S.th}>Horas Totais</th><th style={S.th}>T. Médio/OS</th><th style={S.th}>Ocupação</th>
             </tr></thead>
             <tbody>{d.osPorMec.slice(0, 30).map(m => {
               const hrs = m.tempoTotal / 60
@@ -1107,7 +1107,7 @@ export function Usuarios() {
     equip_criar: 'Criar Equip.', equip_editar: 'Editar Equip.', equip_excluir: 'Excluir Equip.',
     pecas_criar: 'Criar Peça', pecas_editar: 'Editar Peça', pecas_importar: 'Importar Estoque', pecas_exportar: 'Exportar Estoque', pecas_movimentar: 'Movimentar Est.',
     areas_criar: 'Criar Área', areas_editar: 'Editar Área',
-    mecanicos_criar: 'Criar Mecânico', mecanicos_editar: 'Editar Mecânico',
+    mecanicos_criar: 'Criar Técnico', mecanicos_editar: 'Editar Técnico',
     preventiva_criar: 'Criar Plano', preventiva_editar: 'Editar Plano',
     relatorios_ver: 'Ver Relatórios', relatorios_exportar: 'Exportar Relat.',
     usuarios_criar: 'Criar Usuário', usuarios_editar: 'Editar Usuário', usuarios_excluir: 'Excluir Usuário',
