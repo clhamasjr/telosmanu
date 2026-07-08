@@ -187,12 +187,75 @@ export default function OrdensServico({ initialStatusFilter, onClearFilter, qrEq
   const isSolic = perfil==='solicitante'
   const activeFilter = fStatus!=='TODOS'?statusList.find(s=>s.id===fStatus)?.nome:null
 
+  const exportarCSV = () => {
+    const esc = (v) => { const s = String(v ?? '').replace(/"/g, '""'); return `"${s}"` }
+    const dt = (s) => s ? new Date(s).toLocaleString('pt-BR') : ''
+    const prioLabel = { Critica:'Crítica', Alta:'Alta', Media:'Média', Baixa:'Baixa' }
+    const headers = ['Nº OS','Equipamento','Cód. Equip','Tipo Manutenção','Tipo Falha','Área','Status','Prioridade','Solicitante','Recebido por','Data Recebimento','Data Abertura','Executado por','Resp. Manutenção','Liberado por','Início Serviço','Término Serviço','Descrição','Observações']
+    const rows = filtered.map(o => [
+      o.numero_ordem||'', o.equipamentos?.nome||'', o.equipamentos?.codigo||'',
+      o.tipos_manutencao?.nome||'', o.tipos_falha?.nome||'', o.areas?.nome||'',
+      o.status_os?.nome||'', prioLabel[o.prioridade]||o.prioridade||'',
+      o.solicitante||'', o.recebido_por||'', dt(o.data_recebimento),
+      dt(o.data_abertura), o.executado_por||'', o.resp_manutencao||'', o.liberado_por||'',
+      dt(o.data_inicio), dt(o.data_conclusao), o.descricao||'', o.observacoes||'',
+    ].map(esc).join(';'))
+    const csv = '﻿' + headers.map(esc).join(';') + '\n' + rows.join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url
+    a.download = `OS_${pAtivo.from||'tudo'}_a_${pAtivo.to||'hoje'}.csv`
+    a.click(); URL.revokeObjectURL(url)
+  }
+
+  const exportarPDF = () => {
+    const esc = (s) => String(s ?? '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))
+    const dt = (s) => s ? new Date(s).toLocaleDateString('pt-BR') : '—'
+    const prioLabel = { Critica:'Crítica', Alta:'Alta', Media:'Média', Baixa:'Baixa' }
+    const rows = filtered.map(o => `<tr>
+      <td style="font-weight:700;color:#1E40AF">${esc(o.numero_ordem||'—')}</td>
+      <td>${esc(o.equipamentos?.codigo ? o.equipamentos.codigo+' - '+o.equipamentos.nome : o.equipamentos?.nome||'—')}</td>
+      <td>${esc(o.tipos_manutencao?.nome||'—')}</td>
+      <td>${esc(o.areas?.nome||'—')}</td>
+      <td><span style="padding:1px 5px;border-radius:8px;background:${o.status_os?.cor_bg||'#F1F5F9'};color:${o.status_os?.cor||'#334155'}">${esc((o.status_os?.icone||'')+' '+(o.status_os?.nome||'—'))}</span></td>
+      <td>${esc(prioLabel[o.prioridade]||o.prioridade||'—')}</td>
+      <td>${esc(o.solicitante||'—')}</td>
+      <td>${esc(dt(o.data_recebimento||o.data_abertura))}</td>
+      <td style="color:#555">${esc((o.descricao||'').substring(0,70))}${(o.descricao||'').length>70?'…':''}</td>
+    </tr>`).join('')
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Ordens de Serviço</title>
+<style>
+@page{size:A4 landscape;margin:8mm}
+body{font-family:Arial,sans-serif;font-size:9px;color:#000;margin:0;padding:4px}
+h1{color:#1E40AF;font-size:14px;margin:0 0 2px;letter-spacing:2px}
+.meta{color:#64748B;font-size:7px;margin-bottom:8px}
+table{width:100%;border-collapse:collapse}
+th{background:#1E40AF;color:#fff;padding:5px 3px;text-align:left;font-size:7px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+td{padding:3px 3px;border-bottom:1px solid #E2E8F0;vertical-align:top;font-size:8px}
+tr:nth-child(even) td{background:#F8FAFC}
+@media print{th{background:#1E40AF!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style></head><body>
+<h1>ORDENS DE SERVIÇO — MANUTELOS</h1>
+<div class="meta">Fábrica de Algodão Telos &nbsp;·&nbsp; ${filtered.length} OS &nbsp;·&nbsp; Período: ${pAtivo.from||'início'} até ${pAtivo.to||'hoje'} &nbsp;·&nbsp; Emitido em ${new Date().toLocaleString('pt-BR')}</div>
+<table><thead><tr><th>Nº</th><th>Equipamento</th><th>Tipo</th><th>Área</th><th>Status</th><th>Prioridade</th><th>Solicitante</th><th>Data</th><th>Descrição</th></tr></thead>
+<tbody>${rows}</tbody></table>
+<script>setTimeout(()=>window.print(),300)</script>
+</body></html>`
+    const w = window.open('', '_blank'); w.document.write(html); w.document.close()
+  }
+
   if(loading&&ordens.length===0)return<Loading/>
 
   return <div>
     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14,flexWrap:'wrap',gap:10}}>
       <h1 style={{margin:0,fontWeight:800,fontSize:vp.isMobile?22:30,letterSpacing:2,color:ACCENT}}>ORDENS DE SERVIÇO</h1>
-      {canCreate&&<button style={S.btnP} onClick={novaOS}>{isSolic?'📝 ABRIR OS':'+ NOVA OS'}</button>}
+      <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+        {filtered.length>0&&<>
+          <button style={{...S.btnS,color:'#22C55E',borderColor:'#22C55E'}} onClick={exportarCSV}>📊 Excel</button>
+          <button style={{...S.btnS,color:'#A855F7',borderColor:'#A855F7'}} onClick={exportarPDF}>🖨️ PDF</button>
+        </>}
+        {canCreate&&<button style={S.btnP} onClick={novaOS}>{isSolic?'📝 ABRIR OS':'+ NOVA OS'}</button>}
+      </div>
     </div>
     <div style={{display:'flex',gap:6,marginBottom:10,flexWrap:'wrap',alignItems:'center'}}>
       {[['mes','Mês Atual'],['anterior','Mês Anterior'],['trimestre','Trimestre'],['tudo','Tudo']].map(([k,l])=>
