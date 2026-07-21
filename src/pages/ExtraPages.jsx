@@ -5,6 +5,95 @@ import { PERIODICIDADES, PERFIS, PERFIS_CONFIG, getPerfil, getPermissao, ACCENT,
 import { supabase } from '../lib/supabase'
 
 // ══════════════════════════════════════════════════════
+//  MATCHER DE NOMES DE TÉCNICOS
+//  Resolve executado_por escrito à mão: "Bruno", "Nito",
+//  "Valdenito-Carlos", "Brubo" (typo) → técnicos do cadastro
+// ══════════════════════════════════════════════════════
+const normalizeNome = (s) => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().trim()
+
+const levenshtein = (a, b) => {
+  if (Math.abs(a.length - b.length) > 2) return 99
+  const dp = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)])
+  for (let j = 0; j <= b.length; j++) dp[0][j] = j
+  for (let i = 1; i <= a.length; i++)
+    for (let j = 1; j <= b.length; j++)
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1))
+  return dp[a.length][b.length]
+}
+
+const buildMatcherMec = (mecanicos) => {
+  const fullIndex = {}   // nome completo normalizado → mec
+  const firstIndex = {}  // primeiro nome → [mecs]
+  const fullNames = []   // pra prefix match ("KAWAN DIEGO" → KAWAN DIEGO SOARES...)
+  mecanicos.forEach(m => {
+    const n = normalizeNome(m.nome)
+    if (!fullIndex[n] || m.ativo) fullIndex[n] = m // ativo vence duplicata exata
+    fullNames.push([n, m])
+    const first = n.split(/\s+/)[0]
+    if (!firstIndex[first]) firstIndex[first] = []
+    firstIndex[first].push(m)
+  })
+  // fuzzy (apelido/typo) só contra ATIVOS — evita falso positivo com inativos antigos
+  const ativosFirst = {}
+  mecanicos.filter(m => m.ativo).forEach(m => {
+    const first = normalizeNome(m.nome).split(/\s+/)[0]
+    if (!ativosFirst[first]) ativosFirst[first] = []
+    ativosFirst[first].push(m)
+  })
+  const ativosFirstNames = Object.keys(ativosFirst)
+
+  // desempata mesmo primeiro nome: 1 só → ele; 1 ativo → o ativo; duplicatas idênticas → primeira
+  const resolve = (cands) => {
+    if (!cands || cands.length === 0) return null
+    if (cands.length === 1) return cands[0]
+    const ativos = cands.filter(m => m.ativo)
+    if (ativos.length === 1) return ativos[0]
+    const nomes = new Set(cands.map(m => normalizeNome(m.nome)))
+    if (nomes.size === 1) return ativos[0] || cands[0]
+    return null
+  }
+
+  const matchToken = (tok) => {
+    if (tok.length < 3) return null
+    const exato = resolve(firstIndex[tok])
+    if (exato) return exato
+    if (tok.length < 4) return null
+    // apelido: NITO ⊂ VALDENITO, FRANCINALDOO ⊃ FRANCINALDO
+    const contains = ativosFirstNames.filter(f => f.includes(tok) || tok.includes(f))
+    if (contains.length === 1) return resolve(ativosFirst[contains[0]])
+    // erro de digitação: distância ≤ 2, melhor match único
+    if (tok.length >= 5) {
+      let best = null, bestD = 3, tie = false
+      ativosFirstNames.forEach(f => {
+        const d = levenshtein(tok, f)
+        if (d < bestD) { bestD = d; best = f; tie = false }
+        else if (d === bestD && f !== best) tie = true
+      })
+      if (best && !tie) return resolve(ativosFirst[best])
+    }
+    return null
+  }
+
+  // retorna ARRAY de técnicos distintos citados no texto (suporta compostos "Bruno / Carlos")
+  return (raw) => {
+    const n = normalizeNome(raw).replace(/\./g, ' ').replace(/\s+/g, ' ').trim()
+    if (!n) return []
+    if (fullIndex[n]) return [fullIndex[n]]
+    if (n.includes(' ')) {
+      const pref = fullNames.filter(([fn]) => fn.startsWith(n + ' '))
+      if (pref.length === 1) return [pref[0][1]]
+    }
+    const tokens = n.split(/[\s/,\-+&]+/).filter(t => t && t !== 'E')
+    const found = []
+    tokens.forEach(t => {
+      const m = matchToken(t)
+      if (m && !found.some(x => x.id === m.id)) found.push(m)
+    })
+    return found
+  }
+}
+
+// ══════════════════════════════════════════════════════
 //  RELATÓRIOS & INDICADORES DE MANUTENÇÃO
 // ══════════════════════════════════════════════════════
 export function Relatorios() {
@@ -59,14 +148,16 @@ export function Relatorios() {
       while (true) {
         const { data: rows } = await supabase.from('ordens_servico')
           .select('id,numero_ordem,titulo,data_abertura,data_inicio,data_conclusao,tempo_execucao_min,tempo_maquina_parada_min,tempo_atendimento_min,executado_por,solicitante,equipamento_id,equipamentos(id,nome,codigo),areas(nome),status_os(nome),tipos_manutencao(nome),tipos_falha(nome)')
-          .gte('data_abertura', from + 'T00:00:00').lte('data_abertura', to + 'T23:59:59')
-          .order('data_abertura').range(pg * 1000, (pg + 1) * 1000 - 1)
+          .or(`and(data_abertura.gte.${from}T00:00:00,data_abertura.lte.${to}T23:59:59),and(data_abertura.is.null,data_inicio.gte.${from}T00:00:00,data_inicio.lte.${to}T23:59:59)`)
+          .order('data_abertura', { nullsFirst: false }).order('id').range(pg * 1000, (pg + 1) * 1000 - 1)
         if (!rows || rows.length === 0) break
         allOS = allOS.concat(rows)
         if (rows.length < 1000) break
         pg++; if (pg > 30) break
       }
-      const { data: mecs } = await supabase.from('mecanicos').select('*').eq('ativo', true)
+      // todos os técnicos (inclui inativos) — necessário pro matcher de executado_por
+      const { data: todosMecs } = await supabase.from('mecanicos').select('*')
+      const mecs = (todosMecs || []).filter(m => m.ativo)
 
       // ── MTTR: tempo médio de reparo (conclusão - início) ──
       const repairTimes = allOS.filter(o => o.data_inicio && o.data_conclusao)
@@ -140,18 +231,38 @@ export function Relatorios() {
       // Usado como fallback quando os_mecanicos não tem tempo gravado
       const osDurationMap = {}
       allOS.forEach(o => {
+        let min = 0
         if (o.data_inicio && o.data_conclusao) {
-          const min = Math.round((new Date(o.data_conclusao) - new Date(o.data_inicio)) / 60000)
-          if (min > 0 && min < 72 * 60) osDurationMap[o.id] = min // cap 72h
+          min = Math.round((new Date(o.data_conclusao) - new Date(o.data_inicio)) / 60000)
         }
+        if ((min <= 0 || min >= 72 * 60) && o.tempo_execucao_min > 0) min = o.tempo_execucao_min
+        if (min > 0 && min < 72 * 60) osDurationMap[o.id] = min // cap 72h
       })
 
       // ── Montar mapa de mecânicos com HH real ──
       // Chave = mecanico_id (UUID) para evitar duplicatas Bruno/BRUNO/bruno
       const mecMap = {}
 
+      // Cadastro duplicado: inativo com só o primeiro nome ("Francinaldo") que bate com
+      // exatamente 1 ativo ("FRANCINALDO PEREIRA DE SOUZA") → é a mesma pessoa, funde no ativo
+      const aliasMec = {}
+      const ativosPorPrimeiro = {}
+      mecs.forEach(m => {
+        const first = normalizeNome(m.nome).split(/\s+/)[0]
+        if (!ativosPorPrimeiro[first]) ativosPorPrimeiro[first] = []
+        ativosPorPrimeiro[first].push(m)
+      })
+      ;(todosMecs || []).forEach(m => {
+        if (m.ativo) return
+        const n = normalizeNome(m.nome)
+        if (n.includes(' ')) return // só cadastros de primeiro nome
+        const alvo = ativosPorPrimeiro[n]
+        if (alvo && alvo.length === 1) aliasMec[m.id] = alvo[0]
+      })
+
       const addHH = (mecId, mecNome, minutos, osId) => {
         if (!mecId) return // ignora entradas sem UUID — evita poluição de nomes brutos
+        if (aliasMec[mecId]) { const alvo = aliasMec[mecId]; mecId = alvo.id; mecNome = alvo.nome }
         const nome = mecNome || 'Não identificado'
         if (!mecMap[mecId]) mecMap[mecId] = { nome, total: 0, tempoTotal: 0, osIds: new Set() }
         if (mecMap[mecId].nome !== nome && nome !== 'Não identificado') mecMap[mecId].nome = nome
@@ -162,8 +273,11 @@ export function Relatorios() {
         }
       }
 
-      // OS que já têm registro em os_mecanicos (não duplicar via executado_por)
-      const osComRegistroMec = new Set(allOsMecs.map(h => h.ordem_servico_id))
+      // OS que já têm registro em os_mecanicos ou apontamento_hh (não duplicar via executado_por)
+      const osComRegistroMec = new Set([
+        ...allOsMecs.map(h => h.ordem_servico_id),
+        ...allHH.map(h => h.ordem_servico_id),
+      ])
 
       // 1. os_mecanicos (dados novos — maior prioridade)
       allOsMecs.forEach(h => {
@@ -182,15 +296,17 @@ export function Relatorios() {
       // 2. apontamento_hh (dados legados SOFMAN)
       allHH.forEach(h => addHH(h.mecanico_id, h.mecanicos?.nome, h.tempo_minutos, h.ordem_servico_id))
 
-      // 3. Fallback: executado_por — apenas OS sem os_mecanicos e só se encontrar mecânico cadastrado
+      // 3. Fallback: executado_por — apenas OS sem apontamento; matcher resolve
+      //    primeiro nome ("Bruno"), apelido ("Nito"), typo ("Brubo") e compostos ("Valdenito-Carlos")
+      const matchMec = buildMatcherMec(todosMecs || [])
       allOS.forEach(o => {
-        if (osComRegistroMec.has(o.id)) return // já tem registro via os_mecanicos
+        if (osComRegistroMec.has(o.id)) return // já contabilizada via os_mecanicos/apontamento_hh
         const exec = (o.executado_por || '').trim()
         if (!exec) return
-        const mecMatch = (mecs || []).find(m => m.nome.toLowerCase() === exec.toLowerCase())
-        if (!mecMatch) return // pula nomes compostos ou não cadastrados
+        const encontrados = matchMec(exec)
         const min = osDurationMap[o.id] || 0
-        addHH(mecMatch.id, mecMatch.nome, min, o.id)
+        // cada técnico citado trabalhou a duração da OS (HH = homem × hora)
+        encontrados.forEach(m => addHH(m.id, m.nome, min, o.id))
       })
 
       // 4. Todos os mecânicos ativos — garante que aparecem mesmo sem OS

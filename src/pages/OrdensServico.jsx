@@ -102,6 +102,16 @@ export default function OrdensServico({ initialStatusFilter, onClearFilter, qrEq
 
   const refetch = ()=>setPAtivo({...pAtivo})
 
+  // Sugestões de nomes pro campo "Liberado por" (produção não tem cadastro — usa histórico)
+  const sugestoesPessoas = useMemo(()=>{
+    const s = new Set()
+    ordens.forEach(o=>{
+      const l=(o.liberado_por||'').trim(); if(l)s.add(l)
+      const so=(o.solicitante||'').trim(); if(so)s.add(so)
+    })
+    return [...s].sort((a,b)=>a.localeCompare(b))
+  },[ordens])
+
   const novaOS = () => {
     setOs({
       numero_ordem:'', equipamento_id:'', area_id:'', tipo_manutencao_id:'', tipo_falha_id:'',
@@ -319,7 +329,7 @@ tr:nth-child(even) td{background:#F8FAFC}
         onDel={canEdit&&modal==='editar'?()=>setConfirm({msg:'Excluir?',ok:async()=>{await supabase.from('ordens_servico').delete().eq('id',os.id);setConfirm(null);setModal(null);refetch()}}):null}
         areas={areas} equipamentos={equipamentos} mecanicos={mecanicos} statusList={statusList}
         tiposMan={tiposMan} tiposFalha={tiposFalha} descPadrao={descPadrao} isEdit={modal==='editar'}
-        saving={saving} mobile={vp.isMobile} perfil={perfil} isGestorPlus={isGestorPlus}/>}
+        saving={saving} mobile={vp.isMobile} perfil={perfil} isGestorPlus={isGestorPlus} sugestoesPessoas={sugestoesPessoas}/>}
     </Modal>
     <Modal open={modal==='atender'} onClose={()=>setModal(null)} title={'🔧 ATENDER OS #'+(os?.numero_ordem||'')} mobile={vp.isMobile}>
       {os&&<AtenderOS os={os} statusList={statusList} mecanicos={mecanicos} onDone={()=>{setModal(null);refetch()}} mobile={vp.isMobile}/>}
@@ -335,8 +345,24 @@ tr:nth-child(even) td{background:#F8FAFC}
 }
 
 // ── Formulário ──
-function OSForm({os,setOs,onSave,onCancel,onDel,areas,equipamentos,mecanicos,statusList,tiposMan,tiposFalha,descPadrao,isEdit,saving,mobile,perfil,isGestorPlus}) {
+function OSForm({os,setOs,onSave,onCancel,onDel,areas,equipamentos,mecanicos,statusList,tiposMan,tiposFalha,descPadrao,isEdit,saving,mobile,perfil,isGestorPlus,sugestoesPessoas=[]}) {
   const u=(f,v)=>setOs({...os,[f]:v})
+
+  // Select de técnico que preserva valor antigo digitado à mão (não some ao editar OS legada)
+  const selectTecnico=(campo)=>{
+    const valor=(os[campo]||'').trim()
+    const naLista=!valor||mecanicos.some(m=>m.nome===valor)
+    return<select style={S.select} value={valor} onChange={e=>u(campo,e.target.value)}>
+      <option value="">Selecione...</option>
+      {!naLista&&<option value={valor}>{valor} (digitado)</option>}
+      {mecanicos.map(m=><option key={m.id} value={m.nome}>{m.nome}</option>)}
+    </select>
+  }
+
+  // Executado por: chips multi-técnico, grava como "NOME1 / NOME2" (relatório já entende)
+  const execNomes=(os.executado_por||'').split(' / ').map(s=>s.trim()).filter(Boolean)
+  const addExec=(nome)=>{if(!nome||execNomes.includes(nome))return;u('executado_por',[...execNomes,nome].join(' / '))}
+  const remExec=(nome)=>u('executado_por',execNomes.filter(n=>n!==nome).join(' / '))
   const isSolic=perfil==='solicitante'
   // When equipment changes, auto-fill area
   const onEquipChange = (eqId) => {
@@ -379,7 +405,7 @@ function OSForm({os,setOs,onSave,onCancel,onDel,areas,equipamentos,mecanicos,sta
     </div>
     {/* Recebimento */}
     {!isSolic&&<div style={{display:'grid',gridTemplateColumns:mobile?'1fr':'1fr 1fr',gap:'0 14px'}}>
-      <Field label="Recebido por"><input style={S.input} value={os.recebido_por||''} onChange={e=>u('recebido_por',e.target.value)}/></Field>
+      <Field label="Recebido por">{selectTecnico('recebido_por')}</Field>
       <Field label="Data/Hora Recebimento"><input type="datetime-local" style={S.input} value={os.data_recebimento?os.data_recebimento.substring(0,16):''} onChange={e=>u('data_recebimento',e.target.value?e.target.value+':00':null)}/></Field>
     </div>}
 
@@ -414,9 +440,22 @@ function OSForm({os,setOs,onSave,onCancel,onDel,areas,equipamentos,mecanicos,sta
 
       {/* Responsáveis */}
       <div style={{display:'grid',gridTemplateColumns:mobile?'1fr':'1fr 1fr 1fr',gap:'0 14px',marginTop:6}}>
-        <Field label="Executado por"><input style={S.input} value={os.executado_por||''} onChange={e=>u('executado_por',e.target.value)}/></Field>
-        <Field label="Resp. Manutenção"><input style={S.input} value={os.resp_manutencao||''} onChange={e=>u('resp_manutencao',e.target.value)}/></Field>
-        <Field label="Liberado por"><input style={S.input} value={os.liberado_por||''} onChange={e=>u('liberado_por',e.target.value)}/></Field>
+        <Field label="Executado por">
+          {execNomes.length>0&&<div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:6}}>
+            {execNomes.map(n=><span key={n} style={{display:'inline-flex',alignItems:'center',gap:4,background:'#EFF6FF',color:ACCENT,fontSize:11,fontWeight:600,padding:'3px 8px',borderRadius:12,border:'1px solid #BFDBFE'}}>
+              {n}<button style={{background:'none',border:'none',cursor:'pointer',color:'#EF4444',fontSize:11,padding:0,lineHeight:1}} onClick={()=>remExec(n)}>✕</button>
+            </span>)}
+          </div>}
+          <select style={S.select} value="" onChange={e=>addExec(e.target.value)}>
+            <option value="">{execNomes.length>0?'+ Adicionar técnico...':'Selecione o técnico...'}</option>
+            {mecanicos.filter(m=>!execNomes.includes(m.nome)).map(m=><option key={m.id} value={m.nome}>{m.nome}</option>)}
+          </select>
+        </Field>
+        <Field label="Resp. Manutenção">{selectTecnico('resp_manutencao')}</Field>
+        <Field label="Liberado por">
+          <input style={S.input} list="dl-liberado-por" value={os.liberado_por||''} onChange={e=>u('liberado_por',e.target.value)} placeholder="Nome de quem liberou"/>
+          <datalist id="dl-liberado-por">{sugestoesPessoas.map(n=><option key={n} value={n}/>)}</datalist>
+        </Field>
       </div>
 
       {/* Datas serviço */}
@@ -519,7 +558,8 @@ function OSMecanicos({osId, mecanicos}) {
     return h > 0 ? `${h}h${min ? ' ' + min + 'min' : ''}` : `${min}min`
   }
   const totalMin = linked.reduce((s, m) => s + (m.tempo_minutos || 0), 0)
-  const disponiveis = mecanicos.filter(m => !linked.some(l => l.mecanico_id === m.id))
+  // mesmo técnico pode ter vários atendimentos na OS — só bloqueia quem está ATENDENDO agora
+  const disponiveis = mecanicos.filter(m => !linked.some(l => l.mecanico_id === m.id && !l.data_fim))
 
   return <div style={{ marginBottom: 14, background: '#F8FAFC', borderRadius: 8, padding: 12, border: '1px solid #E2E8F0' }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 6 }}>
