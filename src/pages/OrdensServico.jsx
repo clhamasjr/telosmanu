@@ -138,6 +138,13 @@ export default function OrdensServico({ initialStatusFilter, onClearFilter, qrEq
     const d={...os}
     ;['areas','equipamentos','mecanicos','status_os','tipos_manutencao','tipos_falha'].forEach(k=>delete d[k])
     Object.keys(d).forEach(k=>{if(d[k]==='')d[k]=null})
+    // Data de conclusão preenchida ⇒ finaliza a OS automaticamente
+    // (não mexe em Aguardando Aprovação nem Cancelada — têm fluxo próprio)
+    if (d.data_conclusao) {
+      const stAtual = statusList.find(s=>s.id===d.status_id)?.nome
+      const concl = statusList.find(s=>s.nome==='Concluída')
+      if (concl && ['Aberta','Em Andamento','Aguardando Peça'].includes(stAtual)) d.status_id = concl.id
+    }
     // Converter numero_ordem para integer
     if (d.numero_ordem !== null && d.numero_ordem !== undefined) {
       const n = parseInt(d.numero_ordem)
@@ -461,7 +468,14 @@ function OSForm({os,setOs,onSave,onCancel,onDel,areas,equipamentos,mecanicos,sta
       {/* Datas serviço */}
       <div style={{display:'grid',gridTemplateColumns:mobile?'1fr':'1fr 1fr',gap:'0 14px'}}>
         <Field label="Início do Serviço"><input type="datetime-local" style={S.input} value={os.data_inicio?os.data_inicio.substring(0,16):''} onChange={e=>u('data_inicio',e.target.value?e.target.value+':00':null)}/></Field>
-        <Field label="Término do Serviço"><input type="datetime-local" style={S.input} value={os.data_conclusao?os.data_conclusao.substring(0,16):''} onChange={e=>u('data_conclusao',e.target.value?e.target.value+':00':null)}/></Field>
+        <Field label="Término do Serviço"><input type="datetime-local" style={S.input} value={os.data_conclusao?os.data_conclusao.substring(0,16):''} onChange={e=>{
+          const v=e.target.value?e.target.value+':00':null
+          const stNome=statusList.find(s=>s.id===os.status_id)?.nome
+          const concl=statusList.find(s=>s.nome==='Concluída')
+          // preencheu o término ⇒ já marca Concluída na tela (salvar garante de novo)
+          if(v&&concl&&['Aberta','Em Andamento','Aguardando Peça'].includes(stNome))setOs({...os,data_conclusao:v,status_id:concl.id})
+          else u('data_conclusao',v)
+        }}/></Field>
       </div>
     </>}
 
