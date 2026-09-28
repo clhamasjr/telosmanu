@@ -100,12 +100,110 @@ body{font-family:Arial,sans-serif;margin:0;padding:4mm;display:grid;grid-templat
     w.document.write(html); w.document.close()
   }
 
+  // ── Relatório de equipamentos com última OS ──
+  const [exportando, setExportando] = useState(false)
+
+  const buscarResumoOS = async () => {
+    // varre todas as OS (mais recente primeiro) e guarda a última + contagem por equipamento
+    const ultima = {}, qtd = {}
+    let pg = 0
+    while (true) {
+      const { data: rows } = await supabase.from('ordens_servico')
+        .select('equipamento_id,numero_ordem,data_abertura,data_recebimento,descricao,status_os(nome),tipos_manutencao(nome)')
+        .order('data_abertura', { ascending: false, nullsFirst: false }).order('id')
+        .range(pg * 1000, (pg + 1) * 1000 - 1)
+      if (!rows || rows.length === 0) break
+      const limiteFuturo = Date.now() + 86400000 // ignora datas futuras (erro de digitação, ex. 2032)
+      rows.forEach(o => {
+        if (!o.equipamento_id) return
+        qtd[o.equipamento_id] = (qtd[o.equipamento_id] || 0) + 1
+        const dt = o.data_abertura ? new Date(o.data_abertura).getTime() : 0
+        if (!ultima[o.equipamento_id] && dt <= limiteFuturo) ultima[o.equipamento_id] = o
+      })
+      if (rows.length < 1000) break
+      pg++; if (pg > 40) break
+    }
+    return { ultima, qtd }
+  }
+
+  const linhasRelatorio = (ultima, qtd) => filtered.map(e => ({
+    equip: e,
+    familia: familias.find(f => f.id === e.familia_id)?.nome || '',
+    area: areas.find(a => a.id === e.area_id)?.nome || '',
+    totalOS: qtd[e.id] || 0,
+    ult: ultima[e.id] || null,
+  }))
+
+  const exportarCSV = async () => {
+    setExportando(true)
+    try {
+      const { ultima, qtd } = await buscarResumoOS()
+      const esc = (v) => { const s = String(v ?? '').replace(/"/g, '""'); return `"${s}"` }
+      const headers = ['Código','Equipamento','TAG','Família','Área','Status','Fabricante','Modelo','Total OS','Últ. OS Nº','Últ. OS Data','Últ. OS Tipo','Últ. OS Status','Últ. OS Descrição']
+      const rows = linhasRelatorio(ultima, qtd).map(l => [
+        l.equip.codigo||'', l.equip.nome||'', l.equip.tag||'', l.familia, l.area,
+        l.equip.status||'', l.equip.fabricante||'', l.equip.modelo||'', l.totalOS,
+        l.ult?.numero_ordem||'', l.ult?fmtDate(l.ult.data_recebimento||l.ult.data_abertura):'',
+        l.ult?.tipos_manutencao?.nome||'', l.ult?.status_os?.nome||'', l.ult?.descricao||'',
+      ].map(esc).join(';'))
+      const csv = '﻿' + headers.map(esc).join(';') + '\n' + rows.join('\n')
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a'); a.href = url
+      a.download = `Equipamentos_${new Date().toISOString().split('T')[0]}.csv`
+      a.click(); URL.revokeObjectURL(url)
+    } finally { setExportando(false) }
+  }
+
+  const exportarPDF = async () => {
+    setExportando(true)
+    try {
+      const { ultima, qtd } = await buscarResumoOS()
+      const esc = (s) => String(s ?? '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))
+      const trs = linhasRelatorio(ultima, qtd).map(l => `<tr>
+        <td style="font-weight:700;color:#1E40AF;white-space:nowrap">${esc(l.equip.codigo||'—')}</td>
+        <td>${esc(l.equip.nome||'—')}</td>
+        <td>${esc(l.familia||'—')}</td>
+        <td>${esc(l.area||'—')}</td>
+        <td>${esc(l.equip.status||'—')}</td>
+        <td style="text-align:center;font-weight:700">${l.totalOS}</td>
+        <td style="font-weight:700;white-space:nowrap">${esc(l.ult?.numero_ordem||'—')}</td>
+        <td style="white-space:nowrap">${l.ult?esc(fmtDate(l.ult.data_recebimento||l.ult.data_abertura)):'—'}</td>
+        <td>${esc(l.ult?.status_os?.nome||'—')}</td>
+        <td style="color:#555">${esc((l.ult?.descricao||'—').substring(0,70))}${(l.ult?.descricao||'').length>70?'…':''}</td>
+      </tr>`).join('')
+      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Relatório de Equipamentos</title>
+<style>
+@page{size:A4 landscape;margin:8mm}
+body{font-family:Arial,sans-serif;font-size:9px;color:#000;margin:0;padding:4px}
+h1{color:#1E40AF;font-size:14px;margin:0 0 2px;letter-spacing:2px}
+.meta{color:#64748B;font-size:7px;margin-bottom:8px}
+table{width:100%;border-collapse:collapse}
+th{background:#1E40AF;color:#fff;padding:5px 3px;text-align:left;font-size:7px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+td{padding:3px;border-bottom:1px solid #E2E8F0;vertical-align:top;font-size:8px}
+tr:nth-child(even) td{background:#F8FAFC}
+@media print{th{background:#1E40AF!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style></head><body>
+<h1>RELATÓRIO DE EQUIPAMENTOS — MANUTELOS</h1>
+<div class="meta">Fábrica de Algodão Telos &nbsp;·&nbsp; ${filtered.length} equipamento(s) &nbsp;·&nbsp; Emitido em ${new Date().toLocaleString('pt-BR')}</div>
+<table><thead><tr><th>Código</th><th>Equipamento</th><th>Família</th><th>Área</th><th>Status</th><th>OS</th><th>Últ. OS</th><th>Data</th><th>Status OS</th><th>Última Ocorrência</th></tr></thead>
+<tbody>${trs}</tbody></table>
+<script>setTimeout(()=>window.print(),300)</script>
+</body></html>`
+      const w = window.open('', '_blank'); w.document.write(html); w.document.close()
+    } finally { setExportando(false) }
+  }
+
   if (loading) return <Loading />
 
   return <div>
     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14,flexWrap:'wrap',gap:8}}>
       <h1 style={{margin:0,fontFamily:FONT_DISPLAY,fontSize:vp.isMobile?22:30,letterSpacing:2,color:ACCENT}}>EQUIPAMENTOS</h1>
       <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+        {filtered.length>0&&<>
+          <button style={{...S.btnS,color:'#22C55E',borderColor:'#22C55E',opacity:exportando?.5:1}} disabled={exportando} onClick={exportarCSV}>{exportando?'⏳ Gerando...':'📊 Excel'}</button>
+          <button style={{...S.btnS,color:'#A855F7',borderColor:'#A855F7',opacity:exportando?.5:1}} disabled={exportando} onClick={exportarPDF}>{exportando?'⏳ Gerando...':'🖨️ PDF'}</button>
+        </>}
         <button style={{...S.btnS,color:'#A855F7',borderColor:'#A855F7'}} onClick={imprimirTodasEtiquetas}>🏷️ Imprimir Etiquetas QR</button>
         <button style={S.btnP} onClick={novo}>+ NOVO</button>
       </div>
