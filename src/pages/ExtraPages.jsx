@@ -406,6 +406,7 @@ export function Relatorios() {
     { key: 'equipamentos', label: '⚙️ Equipamentos', short: 'Equip' },
     { key: 'mecanicos', label: '👨‍🔧 Técnicos', short: 'Téc' },
     { key: 'sugestoes', label: '💡 Sugestões', short: 'Prev' },
+    { key: 'diario', label: '📔 Diário', short: 'Diário' },
   ]
 
   return <div>
@@ -584,7 +585,93 @@ export function Relatorios() {
         </div>
       }
     </>}
+
+    {/* ── TAB: DIÁRIO DE MANUTENÇÃO ── */}
+    {tab === 'diario' && <DiarioTab from={periodoAtivo.from} to={periodoAtivo.to} vp={vp} />}
   </div>
+}
+
+// ══════════════════════════════════════════════════════
+//  DIÁRIO DE MANUTENÇÃO (resumo dos relatórios manuscritos)
+// ══════════════════════════════════════════════════════
+function DiarioTab({ from, to, vp }) {
+  const [rows, setRows] = useState(null)
+  const [erro, setErro] = useState(null)
+  const [aberto, setAberto] = useState({}) // id → bool (expande atividades)
+
+  useEffect(() => {
+    (async () => {
+      setRows(null); setErro(null)
+      const { data, error } = await supabase.from('diario_manutencao')
+        .select('*').gte('data', from).lte('data', to)
+        .order('data', { ascending: false }).order('tecnico')
+      if (error) { setErro(error.message); setRows([]); return }
+      setRows(data || [])
+    })()
+  }, [from, to])
+
+  if (rows === null) return <Loading />
+  if (erro) return <div style={{ ...S.card, borderLeft: '3px solid #F59E0B', color: '#92400E', fontSize: 12 }}>
+    Tabela do diário ainda não existe no banco ({erro}). Peça para criar a tabela <b>diario_manutencao</b>.
+  </div>
+  if (rows.length === 0) return <Empty icon="📔" msg="Nenhum diário no período" />
+
+  const fmtD = (s) => { const [y, m, dd] = s.split('-'); return `${dd}/${m}/${y}` }
+  const diaSemana = (s) => ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][new Date(s + 'T12:00:00').getDay()]
+  const minutos = (a) => {
+    if (!a.inicio || !a.fim) return 0
+    const [h1, m1] = a.inicio.split(':').map(Number), [h2, m2] = a.fim.split(':').map(Number)
+    return Math.max(0, (h2 * 60 + m2) - (h1 * 60 + m1))
+  }
+  const fmtMin = (m) => m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ' ' + (m % 60) + 'min' : ''}` : `${m}min`
+
+  // agrupa por data
+  const porData = {}
+  rows.forEach(r => { if (!porData[r.data]) porData[r.data] = []; porData[r.data].push(r) })
+  const totAtiv = rows.reduce((s, r) => s + ((r.atividades || []).length), 0)
+  const osCitadas = new Set(rows.flatMap(r => (r.atividades || []).map(a => a.os).filter(Boolean)))
+
+  return <>
+    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+      <KPI label="Dias com Diário" value={Object.keys(porData).length} accent={ACCENT} sub="No período" small={vp.isMobile} />
+      <KPI label="Relatórios" value={rows.length} accent="#3B82F6" sub="Técnico × dia" small={vp.isMobile} />
+      <KPI label="Atividades" value={totAtiv} accent="#22C55E" sub="Linhas transcritas" small={vp.isMobile} />
+      <KPI label="OS Citadas" value={osCitadas.size} accent="#A855F7" sub="Distintas" small={vp.isMobile} />
+    </div>
+
+    {Object.entries(porData).map(([dia, lista]) => <div key={dia} style={{ marginBottom: 18 }}>
+      <h3 style={{ margin: '0 0 10px', fontSize: 13, color: '#0F172A', fontWeight: 800 }}>
+        📅 {diaSemana(dia)}, {fmtD(dia)} <span style={{ color: '#94A3B8', fontWeight: 400, fontSize: 11 }}>· {lista.length} técnico(s)</span>
+      </h3>
+      <div style={{ display: 'grid', gridTemplateColumns: vp.isMobile ? '1fr' : 'repeat(auto-fill,minmax(380px,1fr))', gap: 10 }}>
+        {lista.map(r => {
+          const ativs = r.atividades || []
+          const totMin = ativs.reduce((s, a) => s + minutos(a), 0)
+          const exp = !!aberto[r.id]
+          return <div key={r.id} style={{ ...S.card, borderLeft: '3px solid ' + ACCENT, cursor: 'pointer' }} onClick={() => setAberto(p => ({ ...p, [r.id]: !p[r.id] }))}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, gap: 6, flexWrap: 'wrap' }}>
+              <span style={{ fontWeight: 700, fontSize: 13, color: '#0F172A' }}>🔧 {r.tecnico}</span>
+              <span style={{ fontSize: 10, color: '#64748B' }}>{r.turno ? 'Turno ' + r.turno + ' · ' : ''}{ativs.length} atividade(s){totMin > 0 ? ' · ' + fmtMin(totMin) : ''}</span>
+            </div>
+            <div style={{ fontSize: 12, color: '#334155', lineHeight: 1.5 }}>{r.resumo}</div>
+            {r.observacao && <div style={{ fontSize: 10, color: '#F59E0B', marginTop: 4 }}>⚠️ {r.observacao}</div>}
+            {exp && ativs.length > 0 && <div style={{ marginTop: 10, overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead><tr><th style={{ ...S.th, fontSize: 9 }}>OS</th><th style={{ ...S.th, fontSize: 9 }}>Início</th><th style={{ ...S.th, fontSize: 9 }}>Fim</th><th style={{ ...S.th, fontSize: 9 }}>Descrição</th></tr></thead>
+                <tbody>{ativs.map((a, i) => <tr key={i}>
+                  <td style={{ ...S.td, fontSize: 10, fontWeight: 700, color: ACCENT, whiteSpace: 'nowrap' }}>{a.os || '—'}</td>
+                  <td style={{ ...S.td, fontSize: 10, whiteSpace: 'nowrap' }}>{a.inicio || '—'}</td>
+                  <td style={{ ...S.td, fontSize: 10, whiteSpace: 'nowrap' }}>{a.fim || '—'}</td>
+                  <td style={{ ...S.td, fontSize: 10 }}>{a.descricao}</td>
+                </tr>)}</tbody>
+              </table>
+            </div>}
+            <div style={{ fontSize: 9, color: '#94A3B8', marginTop: 6 }}>{exp ? '▲ Recolher' : '▼ Clique para ver as atividades'}</div>
+          </div>
+        })}
+      </div>
+    </div>)}
+  </>
 }
 
 // ══════════════════════════════════════════════════════
