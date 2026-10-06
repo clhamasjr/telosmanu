@@ -725,7 +725,7 @@ export function Pecas() {
     </div>
 
     {filtered.length===0?<Empty icon="📦" msg="Nenhuma peça" action="Cadastrar" onAction={nova}/>:
-      vp.isMobile?<div style={{display:'flex',flexDirection:'column',gap:12}}>{filtered.map(p=>{
+      vp.isMobile?<div style={{display:'flex',flexDirection:'column',gap:12}}>{filtered.slice(0,300).map(p=>{
         const low=p.quantidade<=p.estoque_minimo,zero=p.quantidade===0
         return <div key={p.id} style={{...S.card,borderLeft:'3px solid '+(zero?'#EF4444':low?'#F59E0B':'#22C55E')}}>
           <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
@@ -742,7 +742,7 @@ export function Pecas() {
       })}</div>:
       <div style={{overflowX:'auto'}}><table style={{width:'100%',borderCollapse:'collapse'}}><thead><tr>
         <th style={S.th}>Código</th><th style={S.th}>Nome</th><th style={S.th}>Cat.</th><th style={S.th}>Un.</th><th style={S.th}>Qtd</th><th style={S.th}>Mín</th><th style={S.th}>Local</th><th style={S.th}>Status</th><th style={S.th}>Ações</th>
-      </tr></thead><tbody>{filtered.map(p=>{
+      </tr></thead><tbody>{filtered.slice(0,300).map(p=>{
         const low=p.quantidade<=p.estoque_minimo,zero=p.quantidade===0
         return <tr key={p.id}>
           <td style={{...S.td,color:ACCENT,fontWeight:700,fontSize:11}}>{p.codigo||'—'}</td>
@@ -760,6 +760,7 @@ export function Pecas() {
         </tr>
       })}</tbody></table></div>
     }
+    {filtered.length>300&&<div style={{textAlign:'center',padding:10,fontSize:11,color:'#94A3B8'}}>Mostrando 300 de {filtered.length} itens — use a busca para encontrar o restante</div>}
 
     {/* Modal Nova/Editar */}
     <Modal open={modal==='novo'||modal==='editar'} onClose={()=>setModal(null)} title={modal==='novo'?'NOVA PEÇA':'EDITAR PEÇA'} mobile={vp.isMobile}>
